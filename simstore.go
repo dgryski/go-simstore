@@ -121,6 +121,17 @@ func (s *Store) Find(sig uint64) []uint64 {
 		sig = (sig << 16) | (sig >> (64 - 16))
 	}
 
+	// dedup ids
+	uniq := make(map[uint64]struct{})
+	for _, id := range ids {
+		uniq[id] = struct{}{}
+	}
+
+	ids = ids[:0]
+	for k := range uniq {
+		ids = append(ids, k)
+	}
+
 	return ids
 }
 
