@@ -3,6 +3,7 @@ package simstore
 
 import (
 	"sort"
+	"sync"
 )
 
 type entry struct {
@@ -68,9 +69,15 @@ func (s *Store) Add(sig uint64, docid uint64) {
 }
 
 func (s *Store) Finish() {
+	var wg sync.WaitGroup
 	for i := range s.tables {
-		sort.Sort(s.tables[i])
+		wg.Add(1)
+		go func(i int) {
+			sort.Sort(s.tables[i])
+			wg.Done()
+		}(i)
 	}
+	wg.Wait()
 }
 
 func (s *Store) Find(sig uint64) []uint64 {
