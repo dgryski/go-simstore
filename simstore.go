@@ -1,4 +1,13 @@
 // Package simstore implements a storage layer for simhash locality-sensitive hashes.
+/*
+
+This package is an implementation of section 3 of "Detecting Near-Duplicates
+for Web Crawling" by Manku, Jain, and Sarma,
+
+    http://www2007.org/papers/paper215.pdf
+
+It is hard-coded for hamming distance 3.
+*/
 package simstore
 
 import (
@@ -41,10 +50,12 @@ func (t table) find(sig uint64) []uint64 {
 	return ids
 }
 
+// Store is a storage engine for 64-bit hashes
 type Store struct {
 	tables [16]table
 }
 
+// Add inserts a signature and document id into the store
 func (s *Store) Add(sig uint64, docid uint64) {
 
 	var t int
@@ -68,6 +79,8 @@ func (s *Store) Add(sig uint64, docid uint64) {
 	}
 }
 
+// Finish prepares the store for searching.  This must be called once after all
+// the signatures have been added via Add().
 func (s *Store) Finish() {
 	var wg sync.WaitGroup
 	for i := range s.tables {
@@ -80,6 +93,8 @@ func (s *Store) Finish() {
 	wg.Wait()
 }
 
+// Find searches the store for all hashes hamming distance 3 or less from the
+// query signature.  It returns the associated list of document ids.
 func (s *Store) Find(sig uint64) []uint64 {
 
 	var ids []uint64
@@ -109,6 +124,7 @@ func (s *Store) Find(sig uint64) []uint64 {
 	return ids
 }
 
+// distance returns the hamming distance between v1 and v2
 func distance(v1 uint64, v2 uint64) int {
 
 	x := v1 ^ v2
