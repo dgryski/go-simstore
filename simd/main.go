@@ -8,9 +8,9 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/dgryski/go-simstore"
-	"github.com/dgryski/go-simstore/simhash"
 )
 
 func main() {
@@ -20,7 +20,6 @@ func main() {
 
 	flag.Parse()
 
-	var docs []string
 	var store simstore.Store
 
 	f, err := os.Open(*input)
@@ -29,75 +28,48 @@ func main() {
 	}
 
 	scanner := bufio.NewScanner(f)
-	var id uint64
+	var docs uint64
 	for scanner.Scan() {
 
-		fname := scanner.Text()
+		fields := strings.Fields(scanner.Text())
 
-		sig, err := hashFile(fname)
+		id, err := strconv.Atoi(fields[0])
 		if err != nil {
-			log.Printf("%s %+v\n", fname, err)
 			continue
 		}
 
-		store.Add(sig, id)
-		id++
-		docs = append(docs, fname)
+		sig, err := strconv.ParseUint(fields[1], 16, 64)
+		if err != nil {
+			continue
+		}
+
+		store.Add(sig, uint64(id))
+		docs++
 	}
 
 	store.Finish()
 
-	log.Println("fingerprinted", id)
+	log.Println("loaded", docs)
 
-	http.HandleFunc("/search", func(w http.ResponseWriter, r *http.Request) { searchHandler(w, r, docs, &store) })
+	http.HandleFunc("/search", func(w http.ResponseWriter, r *http.Request) { searchHandler(w, r, &store) })
 	log.Println("listening on port", *port)
 	log.Fatal(http.ListenAndServe(":"+strconv.Itoa(*port), nil))
 }
 
-func searchHandler(w http.ResponseWriter, r *http.Request, docs []string, store *simstore.Store) {
+func searchHandler(w http.ResponseWriter, r *http.Request, store *simstore.Store) {
 
 	sigstr := r.FormValue("sig")
 
 	var sig64 uint64
 
-	if sigstr == "" {
-		f := r.FormValue("file")
-		var err error
-		sig64, err = hashFile(f)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-	} else {
-		var err error
-		sig64, err = strconv.ParseUint(sigstr, 10, 64)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
+	var err error
+	sig64, err = strconv.ParseUint(sigstr, 16, 64)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
 	}
 
 	matches := store.Find(sig64)
 
-	var fnames []string
-
-	for _, m := range matches {
-		fnames = append(fnames, docs[m])
-	}
-	json.NewEncoder(w).Encode(fnames)
-}
-
-func hashFile(fname string) (uint64, error) {
-	f, err := os.Open(fname)
-	if err != nil {
-		return 0, err
-	}
-	defer f.Close()
-	fscan := bufio.NewScanner(f)
-	fscan.Split(bufio.ScanWords)
-
-	sig := simhash.Hash(fscan)
-	log.Printf("%016x %s", sig, fname)
-
-	return sig, nil
+	json.NewEncoder(w).Encode(matches)
 }
