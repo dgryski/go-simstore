@@ -47,9 +47,9 @@ func main() {
 		docs++
 	}
 
-	store.Finish()
-
 	log.Println("loaded", docs)
+	store.Finish()
+	log.Println("done")
 
 	http.HandleFunc("/search", func(w http.ResponseWriter, r *http.Request) { searchHandler(w, r, &store) })
 	log.Println("listening on port", *port)
