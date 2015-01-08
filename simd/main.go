@@ -3,9 +3,11 @@ package main
 import (
 	"bufio"
 	"encoding/json"
+	_ "expvar"
 	"flag"
 	"log"
 	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"strconv"
 	"strings"
