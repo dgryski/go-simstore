@@ -80,8 +80,25 @@ func (s *Store) Find(sig uint64) []uint64 {
 	var ids []uint64
 
 	// TODO(dgryski): search in parallel
-	for i := range s.tables {
-		ids = append(ids, s.tables[i].find(sig)...)
+	var t int
+	for i := 0; i < 4; i++ {
+		p := sig
+		ids = append(ids, s.tables[t].find(p)...)
+		t++
+
+		p = (sig & 0xffff000000ffffff) | (sig & 0x0000fff000000000 >> 12) | (sig & 0x0000000fff000000 << 12)
+		ids = append(ids, s.tables[t].find(p)...)
+		t++
+
+		p = (sig & 0xffff000fff000fff) | (sig & 0x0000fff000000000 >> 24) | (sig & 0x0000000000fff000 << 24)
+		ids = append(ids, s.tables[t].find(p)...)
+		t++
+
+		p = (sig & 0xffff000ffffff000) | (sig & 0x0000fff000000000 >> 36) | (sig & 0x0000000000000fff << 36)
+		ids = append(ids, s.tables[t].find(p)...)
+		t++
+
+		sig = (sig << 16) | (sig >> (64 - 16))
 	}
 
 	return ids
