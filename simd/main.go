@@ -39,13 +39,13 @@ func main() {
 
 		id, err := strconv.Atoi(fields[0])
 		if err != nil {
-			log.Printf("%d: %q: %v", lines, fields[0], err)
+			log.Printf("%d: error parsing id: %v", lines, err)
 			continue
 		}
 
 		sig, err := strconv.ParseUint(fields[1], 16, 64)
 		if err != nil {
-			log.Printf("%d: %q: %v", lines, fields[1], err)
+			log.Printf("%d: error parsing signature: %v", lines, err)
 			continue
 		}
 
