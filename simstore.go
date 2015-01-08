@@ -3,8 +3,6 @@ package simstore
 
 import (
 	"sort"
-
-	"github.com/dgryski/go-simstore/simhash"
 )
 
 type entry struct {
@@ -33,7 +31,7 @@ func (t table) find(sig uint64) []uint64 {
 	var ids []uint64
 
 	for i < len(t) && t[i].hash&mask == prefix {
-		if simhash.Distance(t[i].hash, sig) <= 3 {
+		if distance(t[i].hash, sig) <= 3 {
 			ids = append(ids, t[i].docid)
 		}
 		i++
@@ -102,4 +100,18 @@ func (s *Store) Find(sig uint64) []uint64 {
 	}
 
 	return ids
+}
+
+func distance(v1 uint64, v2 uint64) int {
+
+	x := v1 ^ v2
+
+	// bit population count, see
+	// http://graphics.stanford.edu/~seander/bithacks.html#CountBitsSetParallel
+	x -= (x >> 1) & 0x5555555555555555
+	x = (x>>2)&0x3333333333333333 + x&0x3333333333333333
+	x += x >> 4
+	x &= 0x0f0f0f0f0f0f0f0f
+	x *= 0x0101010101010101
+	return int(x >> 56)
 }
