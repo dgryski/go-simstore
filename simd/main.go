@@ -30,7 +30,7 @@ func main() {
 	}
 
 	scanner := bufio.NewScanner(f)
-	var docs uint64
+	var lines uint64
 	for scanner.Scan() {
 
 		fields := strings.Fields(scanner.Text())
@@ -46,10 +46,10 @@ func main() {
 		}
 
 		store.Add(sig, uint64(id))
-		docs++
+		lines++
 	}
 
-	log.Println("loaded", docs)
+	log.Println("loaded", lines)
 	store.Finish()
 	log.Println("done")
 
