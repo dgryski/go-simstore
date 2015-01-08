@@ -49,6 +49,10 @@ func main() {
 
 		store.Add(sig, uint64(id))
 		lines++
+
+		if lines%(1<<20) == 0 {
+			log.Println("processed", lines)
+		}
 	}
 
 	log.Println("loaded", lines)
