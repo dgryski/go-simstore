@@ -20,6 +20,8 @@ func main() {
 
 	flag.Parse()
 
+	log.Println("starting simd")
+
 	var store simstore.Store
 
 	f, err := os.Open(*input)
