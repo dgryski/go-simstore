@@ -38,7 +38,7 @@ func main() {
 	}
 
 	scanner := bufio.NewScanner(f)
-	var lines uint64
+	var lines int
 	for scanner.Scan() {
 
 		fields := strings.Fields(scanner.Text())
