@@ -16,9 +16,11 @@ import (
 )
 
 var Metrics = struct {
-	Requests *expvar.Int
+	Requests   *expvar.Int
+	Signatures *expvar.Int
 }{
-	Requests: expvar.NewInt("requests"),
+	Requests:   expvar.NewInt("requests"),
+	Signatures: expvar.NewInt("signatures"),
 }
 
 func main() {
@@ -64,6 +66,7 @@ func main() {
 	}
 
 	log.Println("loaded", lines)
+	Metrics.Signatures.Set(int64(lines))
 	store.Finish()
 	log.Println("done")
 
