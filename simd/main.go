@@ -18,7 +18,7 @@ import (
 func main() {
 
 	port := flag.Int("p", 8080, "port to listen on")
-	input := flag.String("f", "", "file with filenames to load")
+	input := flag.String("f", "", "file with signatures to load")
 
 	flag.Parse()
 
