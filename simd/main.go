@@ -3,7 +3,7 @@ package main
 import (
 	"bufio"
 	"encoding/json"
-	_ "expvar"
+	"expvar"
 	"flag"
 	"log"
 	"net/http"
@@ -14,6 +14,12 @@ import (
 
 	"github.com/dgryski/go-simstore"
 )
+
+var Metrics = struct {
+	Requests *expvar.Int
+}{
+	Requests: expvar.NewInt("requests"),
+}
 
 func main() {
 
@@ -67,6 +73,8 @@ func main() {
 }
 
 func searchHandler(w http.ResponseWriter, r *http.Request, store *simstore.Store) {
+
+	Metrics.Requests.Add(1)
 
 	sigstr := r.FormValue("sig")
 
