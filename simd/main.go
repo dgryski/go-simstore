@@ -12,9 +12,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/DataWraith/vptree"
 	"github.com/dgryski/go-simstore"
-	"github.com/dgryski/go-simstore/simhash"
+	"github.com/dgryski/go-simstore/vptree"
 )
 
 var Metrics = struct {
@@ -24,13 +23,6 @@ var Metrics = struct {
 	Requests:   expvar.NewInt("requests"),
 	Signatures: expvar.NewInt("signatures"),
 }
-
-type vpnode struct {
-	h  uint64
-	id uint64
-}
-
-func hamming(a, b interface{}) float64 { return float64(simhash.Distance(a.(vpnode).h, b.(vpnode).h)) }
 
 func main() {
 
@@ -56,7 +48,7 @@ func main() {
 	}
 
 	scanner := bufio.NewScanner(f)
-	var items []interface{}
+	var items []vptree.Item
 	var lines int
 	for scanner.Scan() {
 
@@ -75,7 +67,7 @@ func main() {
 		}
 
 		if *useVPTree {
-			items = append(items, vpnode{sig, uint64(id)})
+			items = append(items, vptree.Item{sig, uint64(id)})
 		}
 		if *useStore {
 			store.Add(sig, uint64(id))
@@ -96,7 +88,7 @@ func main() {
 	}
 
 	if *useVPTree {
-		vpt = vptree.New(hamming, items)
+		vpt = vptree.New(items)
 		log.Println("vptree done")
 		http.HandleFunc("/topk", func(w http.ResponseWriter, r *http.Request) { topkHandler(w, r, vpt) })
 	}
@@ -127,7 +119,7 @@ func topkHandler(w http.ResponseWriter, r *http.Request, vpt *vptree.VPTree) {
 		return
 	}
 
-	matches, distances := vpt.Search(vpnode{sig64, 0}, k)
+	matches, distances := vpt.Search(sig64, k)
 
 	type hit struct {
 		ID uint64  `json:"id"`
@@ -137,7 +129,7 @@ func topkHandler(w http.ResponseWriter, r *http.Request, vpt *vptree.VPTree) {
 	var results []hit
 
 	for i, m := range matches {
-		results = append(results, hit{ID: m.(vpnode).id, D: distances[i]})
+		results = append(results, hit{ID: m.ID, D: distances[i]})
 	}
 
 	json.NewEncoder(w).Encode(results)
