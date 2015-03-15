@@ -30,9 +30,9 @@ func (t table) Len() int           { return len(t) }
 func (t table) Swap(i, j int)      { t[i], t[j] = t[j], t[i] }
 func (t table) Less(i, j int) bool { return t[i].hash < t[j].hash }
 
-func (t table) find(sig uint64) []uint64 {
+const mask3 = 0xfffffff000000000
 
-	const mask = 0xfffffff000000000
+func (t table) find(sig, mask uint64) []uint64 {
 
 	prefix := sig & mask
 	// TODO(dgryski): interpolation search instead of binary search
@@ -103,19 +103,19 @@ func (s *Store) Find(sig uint64) []uint64 {
 	var t int
 	for i := 0; i < 4; i++ {
 		p := sig
-		ids = append(ids, s.tables[t].find(p)...)
+		ids = append(ids, s.tables[t].find(p, mask3)...)
 		t++
 
 		p = (sig & 0xffff000000ffffff) | (sig & 0x0000fff000000000 >> 12) | (sig & 0x0000000fff000000 << 12)
-		ids = append(ids, s.tables[t].find(p)...)
+		ids = append(ids, s.tables[t].find(p, mask3)...)
 		t++
 
 		p = (sig & 0xffff000fff000fff) | (sig & 0x0000fff000000000 >> 24) | (sig & 0x0000000000fff000 << 24)
-		ids = append(ids, s.tables[t].find(p)...)
+		ids = append(ids, s.tables[t].find(p, mask3)...)
 		t++
 
 		p = (sig & 0xffff000ffffff000) | (sig & 0x0000fff000000000 >> 36) | (sig & 0x0000000000000fff << 36)
-		ids = append(ids, s.tables[t].find(p)...)
+		ids = append(ids, s.tables[t].find(p, mask3)...)
 		t++
 
 		sig = (sig << 16) | (sig >> (64 - 16))
