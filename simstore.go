@@ -6,7 +6,7 @@ for Web Crawling" by Manku, Jain, and Sarma,
 
     http://www2007.org/papers/paper215.pdf
 
-It is hard-coded for hamming distance 3.
+It is hard-coded for hamming distance 3 or 6.
 */
 package simstore
 
