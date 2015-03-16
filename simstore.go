@@ -32,7 +32,7 @@ func (t table) Less(i, j int) bool { return t[i].hash < t[j].hash }
 
 const mask3 = 0xfffffff000000000
 
-func (t table) find(sig, mask uint64) []uint64 {
+func (t table) find(sig, mask uint64, d int) []uint64 {
 
 	prefix := sig & mask
 	// TODO(dgryski): interpolation search instead of binary search
@@ -41,7 +41,7 @@ func (t table) find(sig, mask uint64) []uint64 {
 	var ids []uint64
 
 	for i < len(t) && t[i].hash&mask == prefix {
-		if distance(t[i].hash, sig) <= 3 {
+		if distance(t[i].hash, sig) <= d {
 			ids = append(ids, t[i].docid)
 		}
 		i++
@@ -52,7 +52,14 @@ func (t table) find(sig, mask uint64) []uint64 {
 
 // Store is a storage engine for 64-bit hashes
 type Store struct {
-	tables [16]table
+	tables []table
+}
+
+// New3 returns a Store for searching hamming distance <= 3
+func New3() *Store {
+	s := Store{}
+	s.tables = make([]table, 16)
+	return &s
 }
 
 // Add inserts a signature and document id into the store
@@ -103,19 +110,19 @@ func (s *Store) Find(sig uint64) []uint64 {
 	var t int
 	for i := 0; i < 4; i++ {
 		p := sig
-		ids = append(ids, s.tables[t].find(p, mask3)...)
+		ids = append(ids, s.tables[t].find(p, mask3, 3)...)
 		t++
 
 		p = (sig & 0xffff000000ffffff) | (sig & 0x0000fff000000000 >> 12) | (sig & 0x0000000fff000000 << 12)
-		ids = append(ids, s.tables[t].find(p, mask3)...)
+		ids = append(ids, s.tables[t].find(p, mask3, 3)...)
 		t++
 
 		p = (sig & 0xffff000fff000fff) | (sig & 0x0000fff000000000 >> 24) | (sig & 0x0000000000fff000 << 24)
-		ids = append(ids, s.tables[t].find(p, mask3)...)
+		ids = append(ids, s.tables[t].find(p, mask3, 3)...)
 		t++
 
 		p = (sig & 0xffff000ffffff000) | (sig & 0x0000fff000000000 >> 36) | (sig & 0x0000000000000fff << 36)
-		ids = append(ids, s.tables[t].find(p, mask3)...)
+		ids = append(ids, s.tables[t].find(p, mask3, 3)...)
 		t++
 
 		sig = (sig << 16) | (sig >> (64 - 16))
