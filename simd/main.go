@@ -28,16 +28,24 @@ func main() {
 
 	port := flag.Int("p", 8080, "port to listen on")
 	input := flag.String("f", "", "file with signatures to load")
-	useVPTree := flag.Bool("vptree", true, "load only vptree")
-	useStore := flag.Bool("store", true, "load the simstore")
+	useVPTree := flag.Bool("vptree", true, "load vptree")
+	useStore := flag.Bool("store", true, "load simstore")
+	storeSize := flag.Int("size", 3, "simstore size (3/6)")
 
 	flag.Parse()
 
 	log.Println("starting simd")
 
-	var store *simstore.Store
+	var store simstore.Storage
 	if *useStore {
-		store = &simstore.Store{}
+		switch *storeSize {
+		case 3:
+			store = simstore.New3()
+		case 6:
+			store = simstore.New6()
+		default:
+			log.Fatalf("unknown -size: %v", *storeSize)
+		}
 	}
 
 	var vpt *vptree.VPTree
@@ -135,7 +143,7 @@ func topkHandler(w http.ResponseWriter, r *http.Request, vpt *vptree.VPTree) {
 	json.NewEncoder(w).Encode(results)
 }
 
-func searchHandler(w http.ResponseWriter, r *http.Request, store *simstore.Store) {
+func searchHandler(w http.ResponseWriter, r *http.Request, store simstore.Storage) {
 
 	Metrics.Requests.Add(1)
 
