@@ -9,6 +9,7 @@ import (
 	"net/http"
 	_ "net/http/pprof"
 	"os"
+	"runtime"
 	"strconv"
 	"strings"
 
@@ -33,12 +34,16 @@ func main() {
 	useVPTree := flag.Bool("vptree", true, "load vptree")
 	useStore := flag.Bool("store", true, "load simstore")
 	storeSize := flag.Int("size", 3, "simstore size (3/6)")
+	cpus := flag.Int("cpus", runtime.NumCPU(), "value of GOMAXPROCS")
 
 	flag.Parse()
 
 	expvar.NewString("BuildVersion").Set(BuildVersion)
 
 	log.Println("starting simd", BuildVersion)
+
+	log.Println("setting GOMAXPROCS=", *cpus)
+	runtime.GOMAXPROCS(*cpus)
 
 	var store simstore.Storage
 	if *useStore {
