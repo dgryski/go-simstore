@@ -24,6 +24,8 @@ var Metrics = struct {
 	Signatures: expvar.NewInt("signatures"),
 }
 
+var BuildVersion string = "(development build)"
+
 func main() {
 
 	port := flag.Int("p", 8080, "port to listen on")
@@ -34,7 +36,9 @@ func main() {
 
 	flag.Parse()
 
-	log.Println("starting simd")
+	expvar.NewString("BuildVersion").Set(BuildVersion)
+
+	log.Println("starting simd", BuildVersion)
 
 	var store simstore.Storage
 	if *useStore {
