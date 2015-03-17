@@ -11,6 +11,7 @@ It is hard-coded for hamming distance 3 or 6.
 package simstore
 
 import (
+	"runtime"
 	"sort"
 	"sync"
 )
@@ -86,14 +87,24 @@ func (s *Store) Add(sig uint64, docid uint64) {
 	}
 }
 
+type limiter chan struct{}
+
+func (l limiter) enter() { l <- struct{}{} }
+func (l limiter) leave() { <-l }
+
 // Finish prepares the store for searching.  This must be called once after all
 // the signatures have been added via Add().
 func (s *Store) Finish() {
+
+	l := make(limiter, runtime.GOMAXPROCS(0))
+
 	var wg sync.WaitGroup
 	for i := range s.tables {
+		l.enter()
 		wg.Add(1)
 		go func(i int) {
 			sort.Sort(s.tables[i])
+			l.leave()
 			wg.Done()
 		}(i)
 	}
