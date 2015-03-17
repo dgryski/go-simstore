@@ -50,6 +50,8 @@ func main() {
 		default:
 			log.Fatalf("unknown -size: %v", *storeSize)
 		}
+
+		log.Println("using simstore size", *storeSize)
 	}
 
 	var vpt *vptree.VPTree
