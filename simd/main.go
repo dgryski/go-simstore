@@ -56,6 +56,10 @@ func main() {
 
 	var vpt *vptree.VPTree
 
+	if *input == "" {
+		log.Fatalln("no import hash list provided (-f)")
+	}
+
 	f, err := os.Open(*input)
 	if err != nil {
 		log.Fatalf("unable to load %q: %v", *input, err)
