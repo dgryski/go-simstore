@@ -11,14 +11,13 @@ type Store6 struct {
 }
 
 func New6() *Store6 {
-	s := Store6{}
+	var s Store6
 	s.tables = make([]table, 49)
 	return &s
 }
 
 // Add inserts a signature and document id into the store
 func (s *Store6) Add(sig uint64, docid uint64) {
-
 	t := 0
 
 	var p uint64
@@ -77,7 +76,6 @@ const mask6_10_7 = 0xffff800000000000
 // Find searches the store for all hashes hamming distance 3 or less from the
 // query signature.  It returns the associated list of document ids.
 func (s *Store6) Find(sig uint64) []uint64 {
-
 	var ids []uint64
 
 	// TODO(dgryski): search in parallel
