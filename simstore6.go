@@ -73,7 +73,7 @@ const mask6_9_7 = 0xffff000000000000
 const mask6_10_8 = 0xffffc00000000000
 const mask6_10_7 = 0xffff800000000000
 
-// Find searches the store for all hashes hamming distance 3 or less from the
+// Find searches the store for all hashes hamming distance 6 or less from the
 // query signature.  It returns the associated list of document ids.
 func (s *Store6) Find(sig uint64) []uint64 {
 	var ids []uint64
