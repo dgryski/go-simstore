@@ -16,16 +16,15 @@ import (
 	"sync"
 )
 
+// TODO(dgryski): split hashes and docid into different arrays to optimize cache usage
+
 type entry struct {
 	hash  uint64
 	docid uint64
 }
 
+// TODO(dgryski): table persistent via mmap
 type table []entry
-
-// TODO(dgryski): table persistent (boltdb?)
-// TODO(dgryski): replace array with btree?
-// TODO(dgryski): split hashes and docid into different arrays to optimize cache usage
 
 func (t table) Len() int           { return len(t) }
 func (t table) Swap(i, j int)      { t[i], t[j] = t[j], t[i] }
