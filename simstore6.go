@@ -10,9 +10,16 @@ type Store6 struct {
 	Store
 }
 
-func New6() *Store6 {
+func New6(hashes int) *Store6 {
 	var s Store6
 	s.tables = make([]table, 49)
+
+	if hashes != 0 {
+		for i := range s.tables {
+			s.tables[i] = make([]entry, 0, hashes)
+		}
+	}
+
 	return &s
 }
 

@@ -61,9 +61,14 @@ type Store struct {
 }
 
 // New3 returns a Store for searching hamming distance <= 3
-func New3() *Store {
+func New3(hashes int) *Store {
 	s := Store{}
 	s.tables = make([]table, 16)
+	if hashes != 0 {
+		for i := range s.tables {
+			s.tables[i] = make([]entry, 0, hashes)
+		}
+	}
 	return &s
 }
 

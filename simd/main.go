@@ -51,6 +51,7 @@ func main() {
 	useVPTree := flag.Bool("vptree", true, "load vptree")
 	useStore := flag.Bool("store", true, "load simstore")
 	storeSize := flag.Int("size", 6, "simstore size (3/6)")
+	storeSigs := flag.Int("sigs", 32e6, "expected number of signatures for preallocation")
 	cpus := flag.Int("cpus", runtime.NumCPU(), "value of GOMAXPROCS")
 
 	flag.Parse()
@@ -66,7 +67,7 @@ func main() {
 		log.Fatalln("no import hash list provided (-f)")
 	}
 
-	cfg, err := loadConfig(input, useStore, storeSize, useVPTree)
+	cfg, err := loadConfig(input, useStore, storeSize, storeSigs, useVPTree)
 	if err != nil {
 		log.Fatalln("unable to load config:", err)
 	}
@@ -90,7 +91,7 @@ func main() {
 			case <-sigs:
 				log.Println("caught SIGHUP, reloading")
 
-				cfg, err := loadConfig(input, useStore, storeSize, useVPTree)
+				cfg, err := loadConfig(input, useStore, storeSize, storeSigs, useVPTree)
 				if err != nil {
 					log.Println("reload failed: ignoring:", err)
 					break
@@ -106,14 +107,14 @@ func main() {
 	log.Fatal(http.ListenAndServe(":"+strconv.Itoa(*port), nil))
 }
 
-func loadConfig(input *string, useStore *bool, storeSize *int, useVPTree *bool) (*Config, error) {
+func loadConfig(input *string, useStore *bool, storeSize *int, storeSigs *int, useVPTree *bool) (*Config, error) {
 	var store simstore.Storage
 	if *useStore {
 		switch *storeSize {
 		case 3:
-			store = simstore.New3()
+			store = simstore.New3(*storeSigs)
 		case 6:
-			store = simstore.New6()
+			store = simstore.New6(*storeSigs)
 		default:
 			return nil, fmt.Errorf("unknown storage size: %d", storeSize)
 		}
