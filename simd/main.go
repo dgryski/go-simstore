@@ -127,6 +127,7 @@ func loadConfig(input *string, useStore *bool, storeSize *int, useVPTree *bool) 
 	if err != nil {
 		return nil, fmt.Errorf("unable to load %q: %v", input, err)
 	}
+	defer f.Close()
 
 	scanner := bufio.NewScanner(f)
 	var items []vptree.Item
