@@ -17,6 +17,7 @@ import (
 )
 
 // TODO(dgryski): split hashes and docid into different arrays to optimize cache usage
+// TODO(dgryski): t.add(hash, docid) to make struct change easier
 
 type entry struct {
 	hash  uint64
@@ -35,7 +36,7 @@ const mask3 = 0xfffffff000000000
 func (t table) find(sig, mask uint64, d int) []uint64 {
 
 	prefix := sig & mask
-	// TODO(dgryski): interpolation search instead of binary search
+	// TODO(dgryski): interpolation search instead of binary search; 2x speed up vs. sort.Search()
 	i := sort.Search(len(t), func(i int) bool { return t[i].hash >= prefix })
 
 	if i == -1 {
@@ -160,6 +161,8 @@ func unique(ids []uint64) []uint64 {
 	return ids
 
 }
+
+// TODO(dgryski): replacing this with popcnt() would be ~25% speedup
 
 // distance returns the hamming distance between v1 and v2
 func distance(v1 uint64, v2 uint64) int {
