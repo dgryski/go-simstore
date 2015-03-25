@@ -67,12 +67,10 @@ func main() {
 		log.Fatalln("no import hash list provided (-f)")
 	}
 
-	cfg, err := loadConfig(input, useStore, storeSize, storeSigs, useVPTree)
+	err := loadConfig(input, useStore, storeSize, storeSigs, useVPTree)
 	if err != nil {
 		log.Fatalln("unable to load config:", err)
 	}
-
-	UpdateConfig(cfg)
 
 	if *useStore {
 		http.HandleFunc("/search", func(w http.ResponseWriter, r *http.Request) { searchHandler(w, r) })
@@ -91,13 +89,11 @@ func main() {
 			case <-sigs:
 				log.Println("caught SIGHUP, reloading")
 
-				cfg, err := loadConfig(input, useStore, storeSize, storeSigs, useVPTree)
+				err := loadConfig(input, useStore, storeSize, storeSigs, useVPTree)
 				if err != nil {
 					log.Println("reload failed: ignoring:", err)
 					break
 				}
-
-				UpdateConfig(cfg)
 			}
 		}
 
@@ -107,7 +103,7 @@ func main() {
 	log.Fatal(http.ListenAndServe(":"+strconv.Itoa(*port), nil))
 }
 
-func loadConfig(input *string, useStore *bool, storeSize *int, storeSigs *int, useVPTree *bool) (*Config, error) {
+func loadConfig(input *string, useStore *bool, storeSize *int, storeSigs *int, useVPTree *bool) error {
 	var store simstore.Storage
 	if *useStore {
 		switch *storeSize {
@@ -116,7 +112,7 @@ func loadConfig(input *string, useStore *bool, storeSize *int, storeSigs *int, u
 		case 6:
 			store = simstore.New6(*storeSigs)
 		default:
-			return nil, fmt.Errorf("unknown storage size: %d", storeSize)
+			return fmt.Errorf("unknown storage size: %d", storeSize)
 		}
 
 		log.Println("using simstore size", *storeSize)
@@ -126,7 +122,7 @@ func loadConfig(input *string, useStore *bool, storeSize *int, storeSigs *int, u
 
 	f, err := os.Open(*input)
 	if err != nil {
-		return nil, fmt.Errorf("unable to load %q: %v", input, err)
+		return fmt.Errorf("unable to load %q: %v", input, err)
 	}
 	defer f.Close()
 
@@ -174,7 +170,8 @@ func loadConfig(input *string, useStore *bool, storeSize *int, storeSigs *int, u
 		log.Println("vptree done")
 	}
 
-	return &Config{store: store, vptree: vpt}, nil
+	UpdateConfig(&Config{store: store, vptree: vpt})
+	return nil
 }
 
 func topkHandler(w http.ResponseWriter, r *http.Request) {
