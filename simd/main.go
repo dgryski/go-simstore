@@ -5,13 +5,18 @@ import (
 	"encoding/json"
 	"expvar"
 	"flag"
+	"fmt"
 	"log"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
+	"os/signal"
 	"runtime"
 	"strconv"
 	"strings"
+	"sync/atomic"
+	"syscall"
+	"unsafe"
 
 	"github.com/dgryski/go-simstore"
 	"github.com/dgryski/go-simstore/vptree"
@@ -26,6 +31,18 @@ var Metrics = struct {
 }
 
 var BuildVersion string = "(development build)"
+
+type Config struct {
+	store  simstore.Storage
+	vptree *vptree.VPTree
+}
+
+var config unsafe.Pointer // actual type is *Config
+// CurrentConfig atomically returns the current configuration
+func CurrentConfig() *Config { return (*Config)(atomic.LoadPointer(&config)) }
+
+// UpdateConfig atomically swaps the current configuration
+func UpdateConfig(cfg *Config) { atomic.StorePointer(&config, unsafe.Pointer(cfg)) }
 
 func main() {
 
@@ -45,6 +62,51 @@ func main() {
 	log.Println("setting GOMAXPROCS=", *cpus)
 	runtime.GOMAXPROCS(*cpus)
 
+	if *input == "" {
+		log.Fatalln("no import hash list provided (-f)")
+	}
+
+	cfg, err := loadConfig(input, useStore, storeSize, useVPTree)
+	if err != nil {
+		log.Fatalln("unable to load config:", err)
+	}
+
+	UpdateConfig(cfg)
+
+	if *useStore {
+		http.HandleFunc("/search", func(w http.ResponseWriter, r *http.Request) { searchHandler(w, r) })
+	}
+
+	if *useVPTree {
+		http.HandleFunc("/topk", func(w http.ResponseWriter, r *http.Request) { topkHandler(w, r) })
+	}
+
+	go func() {
+		sigs := make(chan os.Signal)
+		signal.Notify(sigs, syscall.SIGHUP)
+
+		for {
+			select {
+			case <-sigs:
+				log.Println("caught SIGHUP, reloading")
+
+				cfg, err := loadConfig(input, useStore, storeSize, useVPTree)
+				if err != nil {
+					log.Println("reload failed: ignoring:", err)
+					break
+				}
+
+				UpdateConfig(cfg)
+			}
+		}
+
+	}()
+
+	log.Println("listening on port", *port)
+	log.Fatal(http.ListenAndServe(":"+strconv.Itoa(*port), nil))
+}
+
+func loadConfig(input *string, useStore *bool, storeSize *int, useVPTree *bool) (*Config, error) {
 	var store simstore.Storage
 	if *useStore {
 		switch *storeSize {
@@ -53,7 +115,7 @@ func main() {
 		case 6:
 			store = simstore.New6()
 		default:
-			log.Fatalf("unknown -size: %v", *storeSize)
+			return nil, fmt.Errorf("unknown storage size: %d", storeSize)
 		}
 
 		log.Println("using simstore size", *storeSize)
@@ -61,13 +123,9 @@ func main() {
 
 	var vpt *vptree.VPTree
 
-	if *input == "" {
-		log.Fatalln("no import hash list provided (-f)")
-	}
-
 	f, err := os.Open(*input)
 	if err != nil {
-		log.Fatalf("unable to load %q: %v", *input, err)
+		return nil, fmt.Errorf("unable to load %q: %v", input, err)
 	}
 
 	scanner := bufio.NewScanner(f)
@@ -107,20 +165,17 @@ func main() {
 	if *useStore {
 		store.Finish()
 		log.Println("simstore done")
-		http.HandleFunc("/search", func(w http.ResponseWriter, r *http.Request) { searchHandler(w, r, store) })
 	}
 
 	if *useVPTree {
 		vpt = vptree.New(items)
 		log.Println("vptree done")
-		http.HandleFunc("/topk", func(w http.ResponseWriter, r *http.Request) { topkHandler(w, r, vpt) })
 	}
 
-	log.Println("listening on port", *port)
-	log.Fatal(http.ListenAndServe(":"+strconv.Itoa(*port), nil))
+	return &Config{store: store, vptree: vpt}, nil
 }
 
-func topkHandler(w http.ResponseWriter, r *http.Request, vpt *vptree.VPTree) {
+func topkHandler(w http.ResponseWriter, r *http.Request) {
 
 	Metrics.Requests.Add(1)
 
@@ -142,6 +197,8 @@ func topkHandler(w http.ResponseWriter, r *http.Request, vpt *vptree.VPTree) {
 		return
 	}
 
+	vpt := CurrentConfig().vptree
+
 	matches, distances := vpt.Search(sig64, k)
 
 	type hit struct {
@@ -158,7 +215,7 @@ func topkHandler(w http.ResponseWriter, r *http.Request, vpt *vptree.VPTree) {
 	json.NewEncoder(w).Encode(results)
 }
 
-func searchHandler(w http.ResponseWriter, r *http.Request, store simstore.Storage) {
+func searchHandler(w http.ResponseWriter, r *http.Request) {
 
 	Metrics.Requests.Add(1)
 
@@ -172,6 +229,8 @@ func searchHandler(w http.ResponseWriter, r *http.Request, store simstore.Storag
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+
+	store := CurrentConfig().store
 
 	matches := store.Find(sig64)
 
