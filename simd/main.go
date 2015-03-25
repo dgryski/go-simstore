@@ -33,7 +33,7 @@ func main() {
 	input := flag.String("f", "", "file with signatures to load")
 	useVPTree := flag.Bool("vptree", true, "load vptree")
 	useStore := flag.Bool("store", true, "load simstore")
-	storeSize := flag.Int("size", 3, "simstore size (3/6)")
+	storeSize := flag.Int("size", 6, "simstore size (3/6)")
 	cpus := flag.Int("cpus", runtime.NumCPU(), "value of GOMAXPROCS")
 
 	flag.Parse()
