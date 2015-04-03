@@ -53,6 +53,8 @@ func main() {
 	storeSize := flag.Int("size", 6, "simstore size (3/6)")
 	storeSigs := flag.Int("sigs", 32e6, "expected number of signatures for preallocation")
 	cpus := flag.Int("cpus", runtime.NumCPU(), "value of GOMAXPROCS")
+	myNumber := flag.Uint("no", 0, "id of this machine")
+	totalMachines := flag.Uint("of", 1, "number of machines to distribute the table among")
 
 	flag.Parse()
 
@@ -67,7 +69,7 @@ func main() {
 		log.Fatalln("no import hash list provided (-f)")
 	}
 
-	err := loadConfig(input, useStore, storeSize, storeSigs, useVPTree)
+	err := loadConfig(input, useStore, storeSize, storeSigs, useVPTree, myNumber, totalMachines)
 	if err != nil {
 		log.Fatalln("unable to load config:", err)
 	}
@@ -89,7 +91,7 @@ func main() {
 			case <-sigs:
 				log.Println("caught SIGHUP, reloading")
 
-				err := loadConfig(input, useStore, storeSize, storeSigs, useVPTree)
+				err := loadConfig(input, useStore, storeSize, storeSigs, useVPTree, myNumber, totalMachines)
 				if err != nil {
 					log.Println("reload failed: ignoring:", err)
 					break
@@ -145,11 +147,13 @@ func loadConfig(input *string, useStore *bool, storeSize *int, storeSigs *int, u
 			continue
 		}
 
-		if *useVPTree {
-			items = append(items, vptree.Item{sig, uint64(id)})
-		}
-		if *useStore {
-			store.Add(sig, uint64(id))
+		if uint(sig)%*totalMachines == *myNumber {
+			if *useVPTree {
+				items = append(items, vptree.Item{sig, uint64(id)})
+			}
+			if *useStore {
+				store.Add(sig, uint64(id))
+			}
 		}
 		lines++
 
