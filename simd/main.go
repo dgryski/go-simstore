@@ -69,7 +69,7 @@ func main() {
 		log.Fatalln("no import hash list provided (-f)")
 	}
 
-	err := loadConfig(input, useStore, storeSize, storeSigs, useVPTree, myNumber, totalMachines)
+	err := loadConfig(*input, *useStore, *storeSize, *storeSigs, *useVPTree, *myNumber, *totalMachines)
 	if err != nil {
 		log.Fatalln("unable to load config:", err)
 	}
@@ -91,7 +91,7 @@ func main() {
 			case <-sigs:
 				log.Println("caught SIGHUP, reloading")
 
-				err := loadConfig(input, useStore, storeSize, storeSigs, useVPTree, myNumber, totalMachines)
+				err := loadConfig(*input, *useStore, *storeSize, *storeSigs, *useVPTree, *myNumber, *totalMachines)
 				if err != nil {
 					log.Println("reload failed: ignoring:", err)
 					break
@@ -105,24 +105,24 @@ func main() {
 	log.Fatal(http.ListenAndServe(":"+strconv.Itoa(*port), nil))
 }
 
-func loadConfig(input *string, useStore *bool, storeSize *int, storeSigs *int, useVPTree *bool, myNumber *uint, totalMachines *uint) error {
+func loadConfig(input string, useStore bool, storeSize int, storeSigs int, useVPTree bool, myNumber uint, totalMachines uint) error {
 	var store simstore.Storage
-	if *useStore {
-		switch *storeSize {
+	if useStore {
+		switch storeSize {
 		case 3:
-			store = simstore.New3(*storeSigs)
+			store = simstore.New3(storeSigs)
 		case 6:
-			store = simstore.New6(*storeSigs)
+			store = simstore.New6(storeSigs)
 		default:
 			return fmt.Errorf("unknown storage size: %d", storeSize)
 		}
 
-		log.Println("using simstore size", *storeSize)
+		log.Println("using simstore size", storeSize)
 	}
 
 	var vpt *vptree.VPTree
 
-	f, err := os.Open(*input)
+	f, err := os.Open(input)
 	if err != nil {
 		return fmt.Errorf("unable to load %q: %v", input, err)
 	}
@@ -147,11 +147,11 @@ func loadConfig(input *string, useStore *bool, storeSize *int, storeSigs *int, u
 			continue
 		}
 
-		if uint(sig)%*totalMachines == *myNumber {
-			if *useVPTree {
+		if uint(sig)%totalMachines == myNumber {
+			if useVPTree {
 				items = append(items, vptree.Item{sig, uint64(id)})
 			}
-			if *useStore {
+			if useStore {
 				store.Add(sig, uint64(id))
 			}
 		}
@@ -164,12 +164,12 @@ func loadConfig(input *string, useStore *bool, storeSize *int, storeSigs *int, u
 
 	log.Println("loaded", lines)
 	Metrics.Signatures.Set(int64(lines))
-	if *useStore {
+	if useStore {
 		store.Finish()
 		log.Println("simstore done")
 	}
 
-	if *useVPTree {
+	if useVPTree {
 		vpt = vptree.New(items)
 		log.Println("vptree done")
 	}
