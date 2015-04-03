@@ -105,7 +105,7 @@ func main() {
 	log.Fatal(http.ListenAndServe(":"+strconv.Itoa(*port), nil))
 }
 
-func loadConfig(input *string, useStore *bool, storeSize *int, storeSigs *int, useVPTree *bool) error {
+func loadConfig(input *string, useStore *bool, storeSize *int, storeSigs *int, useVPTree *bool, myNumber *uint, totalMachines *uint) error {
 	var store simstore.Storage
 	if *useStore {
 		switch *storeSize {
