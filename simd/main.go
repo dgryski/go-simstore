@@ -162,6 +162,10 @@ func loadConfig(input string, useStore bool, storeSize int, storeSigs int, useVP
 		}
 	}
 
+	if err := scanner.Err(); err != nil {
+		log.Println("error during scan: ", err)
+	}
+
 	log.Println("loaded", lines)
 	Metrics.Signatures.Set(int64(lines))
 	if useStore {
