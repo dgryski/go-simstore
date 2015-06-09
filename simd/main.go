@@ -55,6 +55,7 @@ func main() {
 	cpus := flag.Int("cpus", runtime.NumCPU(), "value of GOMAXPROCS")
 	myNumber := flag.Uint("no", 0, "id of this machine")
 	totalMachines := flag.Uint("of", 1, "number of machines to distribute the table among")
+	small := flag.Bool("small", false, "use small memory for size 3")
 
 	flag.Parse()
 
@@ -69,7 +70,7 @@ func main() {
 		log.Fatalln("no import hash list provided (-f)")
 	}
 
-	err := loadConfig(*input, *useStore, *storeSize, *storeSigs, *useVPTree, *myNumber, *totalMachines)
+	err := loadConfig(*input, *useStore, *storeSize, *small, *storeSigs, *useVPTree, *myNumber, *totalMachines)
 	if err != nil {
 		log.Fatalln("unable to load config:", err)
 	}
@@ -91,7 +92,7 @@ func main() {
 			case <-sigs:
 				log.Println("caught SIGHUP, reloading")
 
-				err := loadConfig(*input, *useStore, *storeSize, *storeSigs, *useVPTree, *myNumber, *totalMachines)
+				err := loadConfig(*input, *useStore, *storeSize, *small, *storeSigs, *useVPTree, *myNumber, *totalMachines)
 				if err != nil {
 					log.Println("reload failed: ignoring:", err)
 					break
@@ -105,12 +106,16 @@ func main() {
 	log.Fatal(http.ListenAndServe(":"+strconv.Itoa(*port), nil))
 }
 
-func loadConfig(input string, useStore bool, storeSize int, storeSigs int, useVPTree bool, myNumber uint, totalMachines uint) error {
+func loadConfig(input string, useStore bool, storeSize int, small bool, storeSigs int, useVPTree bool, myNumber uint, totalMachines uint) error {
 	var store simstore.Storage
 	if useStore {
 		switch storeSize {
 		case 3:
-			store = simstore.New3(storeSigs)
+			if small {
+				store = simstore.New3Small(storeSigs)
+			} else {
+				store = simstore.New3(storeSigs)
+			}
 		case 6:
 			store = simstore.New6(storeSigs)
 		default:

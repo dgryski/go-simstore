@@ -151,6 +151,49 @@ func (s *Store) Find(sig uint64) []uint64 {
 	return unique(ids)
 }
 
+// SmallStore3 is a simstore for distance k=3 with smaller memory requirements
+type SmallStore3 struct {
+	tables [4][1 << 16]table
+}
+
+func New3Small(hashes int) *SmallStore3 {
+	return &SmallStore3{}
+}
+
+func (s *SmallStore3) Add(sig uint64, docid uint64) {
+
+	for i := 0; i < 4; i++ {
+		prefix := (sig & 0xffff000000000000) >> (64 - 16)
+		s.tables[i][prefix] = append(s.tables[i][prefix], entry{hash: sig, docid: docid})
+		sig = (sig << 16) | (sig >> (64 - 16))
+	}
+}
+
+func (s *SmallStore3) Find(sig uint64) []uint64 {
+	var ids []uint64
+	for i := 0; i < 4; i++ {
+		prefix := (sig & 0xffff000000000000) >> (64 - 16)
+
+		t := s.tables[i][prefix]
+
+		for i := range t {
+			if distance(t[i].hash, sig) <= 3 {
+				ids = append(ids, t[i].docid)
+			}
+		}
+		sig = (sig << 16) | (sig >> (64 - 16))
+	}
+	return unique(ids)
+}
+
+func (s *SmallStore3) Finish() {
+	for i := range s.tables {
+		for p := range s.tables[i] {
+			sort.Sort(s.tables[i][p])
+		}
+	}
+}
+
 func unique(ids []uint64) []uint64 {
 	// dedup ids
 	uniq := make(map[uint64]struct{})
