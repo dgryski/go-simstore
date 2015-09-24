@@ -54,8 +54,8 @@ func main() {
 	useStore := flag.Bool("store", true, "load simstore")
 	storeSize := flag.Int("size", 6, "simstore size (3/6)")
 	cpus := flag.Int("cpus", runtime.NumCPU(), "value of GOMAXPROCS")
-	myNumber := flag.Uint("no", 0, "id of this machine")
-	totalMachines := flag.Uint("of", 1, "number of machines to distribute the table among")
+	myNumber := flag.Int("no", 0, "id of this machine")
+	totalMachines := flag.Int("of", 1, "number of machines to distribute the table among")
 	small := flag.Bool("small", false, "use small memory for size 3")
 
 	flag.Parse()
@@ -135,7 +135,7 @@ func lineCounter(input string) (int, error) {
 	return count, nil
 }
 
-func loadConfig(input string, useStore bool, storeSize int, small bool, useVPTree bool, myNumber uint, totalMachines uint) error {
+func loadConfig(input string, useStore bool, storeSize int, small bool, useVPTree bool, myNumber int, totalMachines int) error {
 	var store simstore.Storage
 
 	totalLines, err := lineCounter(input)
@@ -199,7 +199,7 @@ func loadConfig(input string, useStore bool, storeSize int, small bool, useVPTre
 			continue
 		}
 
-		if uint(sig)%totalMachines == myNumber {
+		if sig%uint64(totalMachines) == uint64(myNumber) {
 			if useVPTree {
 				items = append(items, vptree.Item{sig, uint64(id)})
 			}
