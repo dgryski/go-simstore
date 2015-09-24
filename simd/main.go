@@ -53,7 +53,6 @@ func main() {
 	useVPTree := flag.Bool("vptree", true, "load vptree")
 	useStore := flag.Bool("store", true, "load simstore")
 	storeSize := flag.Int("size", 6, "simstore size (3/6)")
-	storeSigs := flag.Int("sigs", 32e6, "expected number of signatures for preallocation")
 	cpus := flag.Int("cpus", runtime.NumCPU(), "value of GOMAXPROCS")
 	myNumber := flag.Uint("no", 0, "id of this machine")
 	totalMachines := flag.Uint("of", 1, "number of machines to distribute the table among")
@@ -71,8 +70,6 @@ func main() {
 	if *input == "" {
 		log.Fatalln("no import hash list provided (-f)")
 	}
-
-	log.Println("ignoring estimated signature count", *storeSigs)
 
 	err := loadConfig(*input, *useStore, *storeSize, *small, *useVPTree, *myNumber, *totalMachines)
 	if err != nil {
