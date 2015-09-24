@@ -136,6 +136,7 @@ func loadConfig(input string, useStore bool, storeSize int, small bool, storeSig
 	scanner := bufio.NewScanner(f)
 	var items []vptree.Item
 	var lines int
+	var signatures int
 	for scanner.Scan() {
 
 		fields := strings.Fields(scanner.Text())
@@ -159,6 +160,7 @@ func loadConfig(input string, useStore bool, storeSize int, small bool, storeSig
 			if useStore {
 				store.Add(sig, uint64(id))
 			}
+			signatures++
 		}
 		lines++
 
@@ -172,7 +174,7 @@ func loadConfig(input string, useStore bool, storeSize int, small bool, storeSig
 	}
 
 	log.Println("loaded", lines)
-	Metrics.Signatures.Set(int64(lines))
+	Metrics.Signatures.Set(int64(signatures))
 	if useStore {
 		store.Finish()
 		log.Println("simstore done")
