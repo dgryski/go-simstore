@@ -2,10 +2,12 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/json"
 	"expvar"
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	_ "net/http/pprof"
@@ -70,7 +72,9 @@ func main() {
 		log.Fatalln("no import hash list provided (-f)")
 	}
 
-	err := loadConfig(*input, *useStore, *storeSize, *small, *storeSigs, *useVPTree, *myNumber, *totalMachines)
+	log.Println("ignoring estimated signature count", *storeSigs)
+
+	err := loadConfig(*input, *useStore, *storeSize, *small, *useVPTree, *myNumber, *totalMachines)
 	if err != nil {
 		log.Fatalln("unable to load config:", err)
 	}
@@ -92,7 +96,7 @@ func main() {
 			case <-sigs:
 				log.Println("caught SIGHUP, reloading")
 
-				err := loadConfig(*input, *useStore, *storeSize, *small, *storeSigs, *useVPTree, *myNumber, *totalMachines)
+				err := loadConfig(*input, *useStore, *storeSize, *small, *useVPTree, *myNumber, *totalMachines)
 				if err != nil {
 					log.Println("reload failed: ignoring:", err)
 					break
@@ -106,18 +110,63 @@ func main() {
 	log.Fatal(http.ListenAndServe(":"+strconv.Itoa(*port), nil))
 }
 
-func loadConfig(input string, useStore bool, storeSize int, small bool, storeSigs int, useVPTree bool, myNumber uint, totalMachines uint) error {
+// https://stackoverflow.com/questions/24562942/golang-how-do-i-determine-the-number-of-lines-in-a-file-efficiently
+func lineCounter(input string) (int, error) {
+	r, err := os.Open(input)
+	if err != nil {
+		return 0, fmt.Errorf("unable to load %q: %v", input, err)
+	}
+	defer r.Close()
+
+	buf := make([]byte, 8196)
+	var count int
+	lineSep := []byte{'\n'}
+
+	for {
+		c, err := r.Read(buf)
+		if err != nil && err != io.EOF {
+			return count, err
+		}
+
+		count += bytes.Count(buf[:c], lineSep)
+
+		if err == io.EOF {
+			break
+		}
+	}
+
+	return count, nil
+}
+
+func loadConfig(input string, useStore bool, storeSize int, small bool, useVPTree bool, myNumber uint, totalMachines uint) error {
 	var store simstore.Storage
+
+	totalLines, err := lineCounter(input)
+	if err != nil {
+		return fmt.Errorf("unable to load %q: %v", input, err)
+	}
+
+	var sigsEstimate = totalLines
+
+	log.Printf("totalLines=%+v\n", totalLines)
+
+	if totalMachines != 1 {
+		// estimate how many signatures will land on this machine, plus a fudge
+		sigsEstimate = int(uint(totalLines)/totalMachines) + int(float64(totalMachines)*0.05)
+	}
+
+	log.Printf("preallocating for %d estimated signatures\n", sigsEstimate)
+
 	if useStore {
 		switch storeSize {
 		case 3:
 			if small {
-				store = simstore.New3Small(storeSigs)
+				store = simstore.New3Small(sigsEstimate)
 			} else {
-				store = simstore.New3(storeSigs)
+				store = simstore.New3(sigsEstimate)
 			}
 		case 6:
-			store = simstore.New6(storeSigs)
+			store = simstore.New6(sigsEstimate)
 		default:
 			return fmt.Errorf("unknown storage size: %d", storeSize)
 		}
@@ -165,7 +214,7 @@ func loadConfig(input string, useStore bool, storeSize int, small bool, storeSig
 		lines++
 
 		if lines%(1<<20) == 0 {
-			log.Println("processed", lines)
+			log.Printf("processed %d of %d", lines, totalLines)
 		}
 	}
 
@@ -173,7 +222,7 @@ func loadConfig(input string, useStore bool, storeSize int, small bool, storeSig
 		log.Println("error during scan: ", err)
 	}
 
-	log.Println("loaded", lines)
+	log.Printf("loaded %d lines, %d signatues (%f%% of estimated)", lines, signatures, 100*float64(signatures)/float64(sigsEstimate))
 	Metrics.Signatures.Set(int64(signatures))
 	if useStore {
 		store.Finish()
