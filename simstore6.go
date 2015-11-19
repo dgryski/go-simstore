@@ -54,6 +54,7 @@ func (s *Store6) Add(sig uint64, docid uint64) {
 		sig = (sig << 9) | (sig >> (64 - 9))
 	}
 
+	p = sig
 	s.tables[t] = append(s.tables[t], entry{hash: p, docid: docid})
 	t++
 	p = (sig & 0xffc0003fffffffff) | (sig & 0x003fc00000000000 >> 8) | (sig & 0x00003fc000000000 << 8)
@@ -116,6 +117,7 @@ func (s *Store6) Find(sig uint64) []uint64 {
 		sig = (sig << 9) | (sig >> (64 - 9))
 	}
 
+	p = sig
 	ids = append(ids, s.tables[t].find(p, mask6_10_8, 6)...)
 	t++
 	p = (sig & 0xffc0003fffffffff) | (sig & 0x003fc00000000000 >> 8) | (sig & 0x00003fc000000000 << 8)
