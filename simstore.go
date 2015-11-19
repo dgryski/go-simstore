@@ -82,6 +82,7 @@ func (s *Store) Add(sig uint64, docid uint64) {
 		p := sig
 		s.tables[t] = append(s.tables[t], entry{hash: p, docid: docid})
 		t++
+
 		p = (sig & 0xffff000000ffffff) | (sig & 0x0000fff000000000 >> 12) | (sig & 0x0000000fff000000 << 12)
 		s.tables[t] = append(s.tables[t], entry{hash: p, docid: docid})
 		t++
