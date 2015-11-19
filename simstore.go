@@ -14,6 +14,8 @@ import (
 	"runtime"
 	"sort"
 	"sync"
+
+	"github.com/dgryski/go-bits"
 )
 
 // TODO(dgryski): split hashes and docid into different arrays to optimize cache usage
@@ -214,15 +216,5 @@ func unique(ids []uint64) []uint64 {
 
 // distance returns the hamming distance between v1 and v2
 func distance(v1 uint64, v2 uint64) int {
-
-	x := v1 ^ v2
-
-	// bit population count, see
-	// http://graphics.stanford.edu/~seander/bithacks.html#CountBitsSetParallel
-	x -= (x >> 1) & 0x5555555555555555
-	x = (x>>2)&0x3333333333333333 + x&0x3333333333333333
-	x += x >> 4
-	x &= 0x0f0f0f0f0f0f0f0f
-	x *= 0x0101010101010101
-	return int(x >> 56)
+	return int(bits.Popcnt(v1 ^ v2))
 }
