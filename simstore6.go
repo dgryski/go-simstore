@@ -76,6 +76,39 @@ func (s *Store6) Add(sig uint64, docid uint64) {
 	s.tables[t] = append(s.tables[t], entry{hash: p, docid: docid})
 }
 
+func (*Store6) unshuffle(sig uint64, t int) uint64 {
+
+	t7 := t % 7
+	shift := 8 * uint64(t7)
+
+	var m2 uint64
+
+	if t < 42 {
+		m2 = 0x007f800000000000
+
+		if t7 == 6 {
+			m2 = 0x007f000000000000
+		}
+	} else {
+		m2 = 0x003fc00000000000
+
+		if t7 >= 5 {
+			m2 = 0x003f800000000000
+
+			if t7 == 6 {
+				shift--
+			}
+		}
+	}
+
+	m3 := uint64(m2 >> shift)
+	m1 := ^uint64(0) &^ (m2 | m3)
+
+	sig = (sig & m1) | (sig & m2 >> shift) | (sig & m3 << shift)
+	sig = (sig >> (9 * (uint64(t) / 7))) | (sig << (64 - (9 * (uint64(t) / 7))))
+	return sig
+}
+
 const mask6_9_8 = 0xffff800000000000
 const mask6_9_7 = 0xffff000000000000
 const mask6_10_8 = 0xffffc00000000000

@@ -99,6 +99,19 @@ func (s *Store) Add(sig uint64, docid uint64) {
 	}
 }
 
+func (*Store) unshuffle(sig uint64, t int) uint64 {
+	const m2 = 0x0000fff000000000
+
+	t4 := t % 4
+	shift := 12 * uint64(t4)
+	m3 := uint64(m2 >> shift)
+	m1 := ^uint64(0) &^ (m2 | m3)
+
+	sig = (sig & m1) | (sig & m2 >> shift) | (sig & m3 << shift)
+	sig = (sig >> (16 * (uint64(t) / 4))) | (sig << (64 - (16 * (uint64(t) / 4))))
+	return sig
+}
+
 type limiter chan struct{}
 
 func (l limiter) enter() { l <- struct{}{} }
