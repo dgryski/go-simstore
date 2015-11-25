@@ -149,7 +149,8 @@ func loadConfig(input string, useStore bool, storeSize int, small bool, useVPTre
 
 	if totalMachines != 1 {
 		// estimate how many signatures will land on this machine, plus a fudge
-		sigsEstimate = totalLines/totalMachines + int(float64(totalLines)*0.05)
+		sigsEstimate = totalLines / totalMachines
+		sigsEstimate += int(float64(sigsEstimate) * 0.05)
 	}
 
 	log.Printf("preallocating for %d estimated signatures\n", sigsEstimate)
