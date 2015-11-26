@@ -34,7 +34,7 @@ func TestAdd6(t *testing.T) {
 		}
 
 		found := s.Find(q)
-		if len(found) != 1 {
+		if len(found) != 1 || found[0] != 0xdeadbeef {
 			t.Errorf("sig = %016x (%064b)\n", sig, sig^q)
 			fails++
 		}
