@@ -5,9 +5,22 @@ import (
 	"testing"
 )
 
-func TestAdd6(t *testing.T) {
+func TestAdd3(t *testing.T) {
+	s := New3(1000000)
+	testAdd(t, s, 3)
+}
 
+func TestAdd3Small(t *testing.T) {
+	s := New3Small(1000000)
+	testAdd(t, s, 3)
+}
+
+func TestAdd6(t *testing.T) {
 	s := New6(1000000)
+	testAdd(t, s, 6)
+}
+
+func testAdd(t *testing.T, s Storage, d int) {
 
 	for i := 0; i < 1000000; i++ {
 		s.Add(uint64(rand.Int63()), uint64(i))
@@ -27,7 +40,7 @@ func TestAdd6(t *testing.T) {
 		q := sig
 
 		// bits := rand.Intn(7)
-		bits := 6
+		bits := d
 
 		for i := 0; i < bits; i++ {
 			q ^= 1 << uint(rand.Intn(64))
