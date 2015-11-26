@@ -49,7 +49,15 @@ func testAdd(t *testing.T, s Storage, d int) {
 		}
 
 		found := s.Find(q)
-		if len(found) != 1 || found[0] != 0xdeadbeef {
+		var foundbeef bool
+		for _, v := range found {
+			if v == 0xdeadbeef {
+				foundbeef = true
+				break
+			}
+
+		}
+		if !foundbeef {
 			t.Errorf("sig = %016x (%064b)\n", sig, sig^q)
 			fails++
 		}
