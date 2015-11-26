@@ -53,18 +53,45 @@ func (t table) find(sig, mask uint64, d int) []uint64 {
 	return ids
 }
 
+// a store for uint64s
+type u64store []uint64
+
+func (u u64store) Len() int               { return len(u) }
+func (u u64store) Less(i int, j int) bool { return u[i] < u[j] }
+func (u u64store) Swap(i int, j int)      { u[i], u[j] = u[j], u[i] }
+
+func (u u64store) find(sig, mask uint64, d int) []uint64 {
+
+	prefix := sig & mask
+	// TODO(dgryski): interpolation search instead of binary search; 2x speed up vs. sort.Search()
+	i := sort.Search(len(u), func(i int) bool { return u[i] >= prefix })
+
+	var ids []uint64
+
+	for i < len(u) && u[i]&mask == prefix {
+		if distance(u[i], sig) <= d {
+			ids = append(ids, u[i])
+		}
+		i++
+	}
+
+	return ids
+}
+
 // Store is a storage engine for 64-bit hashes
 type Store struct {
-	tables []table
+	docids  table
+	rhashes []u64store
 }
 
 // New3 returns a Store for searching hamming distance <= 3
 func New3(hashes int) *Store {
 	s := Store{}
-	s.tables = make([]table, 16)
+	s.rhashes = make([]u64store, 16)
 	if hashes != 0 {
-		for i := range s.tables {
-			s.tables[i] = make([]entry, 0, hashes)
+		s.docids = make(table, 0, hashes)
+		for i := range s.rhashes {
+			s.rhashes[i] = make([]uint64, 0, hashes)
 		}
 	}
 	return &s
@@ -74,21 +101,24 @@ func New3(hashes int) *Store {
 func (s *Store) Add(sig uint64, docid uint64) {
 
 	var t int
+
+	s.docids = append(s.docids, entry{hash: sig, docid: docid})
+
 	for i := 0; i < 4; i++ {
 		p := sig
-		s.tables[t] = append(s.tables[t], entry{hash: p, docid: docid})
+		s.rhashes[t] = append(s.rhashes[t], p)
 		t++
 
 		p = (sig & 0xffff000000ffffff) | (sig & 0x0000fff000000000 >> 12) | (sig & 0x0000000fff000000 << 12)
-		s.tables[t] = append(s.tables[t], entry{hash: p, docid: docid})
+		s.rhashes[t] = append(s.rhashes[t], p)
 		t++
 
 		p = (sig & 0xffff000fff000fff) | (sig & 0x0000fff000000000 >> 24) | (sig & 0x0000000000fff000 << 24)
-		s.tables[t] = append(s.tables[t], entry{hash: p, docid: docid})
+		s.rhashes[t] = append(s.rhashes[t], p)
 		t++
 
 		p = (sig & 0xffff000ffffff000) | (sig & 0x0000fff000000000 >> 36) | (sig & 0x0000000000000fff << 36)
-		s.tables[t] = append(s.tables[t], entry{hash: p, docid: docid})
+		s.rhashes[t] = append(s.rhashes[t], p)
 		t++
 
 		sig = (sig << 16) | (sig >> (64 - 16))
@@ -108,6 +138,14 @@ func (*Store) unshuffle(sig uint64, t int) uint64 {
 	return sig
 }
 
+func (s *Store) unshuffleList(sigs []uint64, t int) []uint64 {
+	for i := range sigs {
+		sigs[i] = s.unshuffle(sigs[i], t)
+	}
+
+	return sigs
+}
+
 type limiter chan struct{}
 
 func (l limiter) enter() { l <- struct{}{} }
@@ -120,11 +158,14 @@ func (s *Store) Finish() {
 	l := make(limiter, runtime.GOMAXPROCS(0))
 
 	var wg sync.WaitGroup
-	for i := range s.tables {
+
+	sort.Sort(s.docids)
+
+	for i := range s.rhashes {
 		l.enter()
 		wg.Add(1)
 		go func(i int) {
-			sort.Sort(s.tables[i])
+			sort.Sort(s.rhashes[i])
 			l.leave()
 			wg.Done()
 		}(i)
@@ -142,25 +183,32 @@ func (s *Store) Find(sig uint64) []uint64 {
 	var t int
 	for i := 0; i < 4; i++ {
 		p := sig
-		ids = append(ids, s.tables[t].find(p, mask3, 3)...)
+		ids = append(ids, s.unshuffleList(s.rhashes[t].find(p, mask3, 3), t)...)
 		t++
 
 		p = (sig & 0xffff000000ffffff) | (sig & 0x0000fff000000000 >> 12) | (sig & 0x0000000fff000000 << 12)
-		ids = append(ids, s.tables[t].find(p, mask3, 3)...)
+		ids = append(ids, s.unshuffleList(s.rhashes[t].find(p, mask3, 3), t)...)
 		t++
 
 		p = (sig & 0xffff000fff000fff) | (sig & 0x0000fff000000000 >> 24) | (sig & 0x0000000000fff000 << 24)
-		ids = append(ids, s.tables[t].find(p, mask3, 3)...)
+		ids = append(ids, s.unshuffleList(s.rhashes[t].find(p, mask3, 3), t)...)
 		t++
 
 		p = (sig & 0xffff000ffffff000) | (sig & 0x0000fff000000000 >> 36) | (sig & 0x0000000000000fff << 36)
-		ids = append(ids, s.tables[t].find(p, mask3, 3)...)
+		ids = append(ids, s.unshuffleList(s.rhashes[t].find(p, mask3, 3), t)...)
 		t++
 
 		sig = (sig << 16) | (sig >> (64 - 16))
 	}
 
-	return unique(ids)
+	ids = unique(ids)
+
+	var docids []uint64
+	for _, v := range ids {
+		docids = append(docids, s.docids.find(v, ^uint64(0), 0)...)
+	}
+
+	return unique(docids)
 }
 
 // SmallStore3 is a simstore for distance k=3 with smaller memory requirements

@@ -11,9 +11,9 @@ func TestUnshuffle(t *testing.T) {
 		s := New3(1)
 		s.Add(hash, 0)
 
-		for i := range s.tables {
-			if got := s.unshuffle(s.tables[i][0].hash, i); got != hash {
-				t.Errorf("unshuffle(tables[%d])=%016x, want %016x\n", i, got, hash)
+		for i := range s.rhashes {
+			if got := s.unshuffle(s.rhashes[i][0], i); got != hash {
+				t.Errorf("unshuffle(rhashes[%d])=%016x, want %016x\n", i, got, hash)
 				return false
 			}
 		}
@@ -29,9 +29,9 @@ func TestUnshuffle6(t *testing.T) {
 		s := New6(1)
 		s.Add(hash, 0)
 
-		for i := range s.tables {
-			if got := s.unshuffle(s.tables[i][0].hash, i); got != hash {
-				t.Errorf("unshuffle(tables[%d])=%016x, want %016x\n", i, got, hash)
+		for i := range s.rhashes {
+			if got := s.unshuffle(s.rhashes[i][0], i); got != hash {
+				t.Errorf("unshuffle(rhashes[%d])=%016x, want %016x\n", i, got, hash)
 				return false
 			}
 		}
