@@ -41,10 +41,6 @@ func (t table) find(sig, mask uint64, d int) []uint64 {
 	// TODO(dgryski): interpolation search instead of binary search; 2x speed up vs. sort.Search()
 	i := sort.Search(len(t), func(i int) bool { return t[i].hash >= prefix })
 
-	if i == -1 {
-		return nil
-	}
-
 	var ids []uint64
 
 	for i < len(t) && t[i].hash&mask == prefix {
