@@ -1,7 +1,6 @@
 package simstore
 
 import (
-	"log"
 	"math/rand"
 	"testing"
 )
@@ -36,7 +35,6 @@ func TestAdd6(t *testing.T) {
 
 		found := s.Find(q)
 		if len(found) != 1 {
-			log.Printf("found = %+v\n", found)
 			t.Errorf("sig = %016x (%064b)\n", sig, sig^q)
 			fails++
 		}
