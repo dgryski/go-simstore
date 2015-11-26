@@ -22,6 +22,8 @@ func TestAdd6(t *testing.T) {
 
 func testAdd(t *testing.T, s Storage, d int) {
 
+	rand.Seed(0)
+
 	for i := 0; i < 1000000; i++ {
 		s.Add(uint64(rand.Int63()), uint64(i))
 	}
