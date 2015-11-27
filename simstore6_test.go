@@ -20,6 +20,16 @@ func TestAdd6(t *testing.T) {
 	testAdd(t, s, 6)
 }
 
+func TestAdd3Z(t *testing.T) {
+	s := New3(1000000, NewZStore)
+	testAdd(t, s, 3)
+}
+
+func TestAdd6Z(t *testing.T) {
+	s := New6(1000000, NewZStore)
+	testAdd(t, s, 6)
+}
+
 func testAdd(t *testing.T, s Storage, d int) {
 
 	rand.Seed(0)

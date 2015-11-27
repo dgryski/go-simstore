@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"io"
+	"sort"
 
 	"github.com/dgryski/go-bits"
 	"github.com/dgryski/go-bitstream"
@@ -159,4 +160,40 @@ func (z zstore) decompressBlock(block int) (u64slice, error) {
 	}
 
 	return u, nil
+}
+
+func (z *zstore) find(sig, mask uint64, d int) []uint64 {
+
+	prefix := sig & mask
+	// TODO(dgryski): interpolation search instead of binary search; 2x speed up vs. sort.Search()
+	block := sort.Search(len(z.index), func(i int) bool { return z.index[i] >= prefix })
+
+	var ids []uint64
+
+	if block > 0 {
+		u, err := z.decompressBlock(block - 1)
+		if err != nil {
+			return nil
+		}
+		ids = u.find(sig, mask, d)
+	}
+
+	if block >= z.blocks() {
+		return ids
+	}
+
+	u, err := z.decompressBlock(block)
+	if err != nil {
+		return nil
+	}
+	ids = append(ids, u.find(sig, mask, d)...)
+
+	for u[len(u)-1]&mask == prefix {
+		u, err = z.decompressBlock(block)
+		if err != nil {
+			return nil
+		}
+		ids = append(ids, u.find(sig, mask, d)...)
+	}
+	return ids
 }
