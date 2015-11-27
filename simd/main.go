@@ -161,10 +161,10 @@ func loadConfig(input string, useStore bool, storeSize int, small bool, useVPTre
 			if small {
 				store = simstore.New3Small(sigsEstimate)
 			} else {
-				store = simstore.New3(sigsEstimate)
+				store = simstore.New3(sigsEstimate, simstore.NewU64Slice)
 			}
 		case 6:
-			store = simstore.New6(sigsEstimate)
+			store = simstore.New6(sigsEstimate, simstore.NewU64Slice)
 		default:
 			return fmt.Errorf("unknown storage size: %d", storeSize)
 		}
