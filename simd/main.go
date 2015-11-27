@@ -57,6 +57,7 @@ func main() {
 	myNumber := flag.Int("no", 0, "id of this machine")
 	totalMachines := flag.Int("of", 1, "number of machines to distribute the table among")
 	small := flag.Bool("small", false, "use small memory for size 3")
+	compressed := flag.Bool("z", false, "use compressed tables")
 
 	flag.Parse()
 
@@ -71,7 +72,7 @@ func main() {
 		log.Fatalln("no import hash list provided (-f)")
 	}
 
-	err := loadConfig(*input, *useStore, *storeSize, *small, *useVPTree, *myNumber, *totalMachines)
+	err := loadConfig(*input, *useStore, *storeSize, *small, *compressed, *useVPTree, *myNumber, *totalMachines)
 	if err != nil {
 		log.Fatalln("unable to load config:", err)
 	}
@@ -93,7 +94,7 @@ func main() {
 			case <-sigs:
 				log.Println("caught SIGHUP, reloading")
 
-				err := loadConfig(*input, *useStore, *storeSize, *small, *useVPTree, *myNumber, *totalMachines)
+				err := loadConfig(*input, *useStore, *storeSize, *small, *compressed, *useVPTree, *myNumber, *totalMachines)
 				if err != nil {
 					log.Println("reload failed: ignoring:", err)
 					break
@@ -135,7 +136,7 @@ func lineCounter(input string) (int, error) {
 	return count, nil
 }
 
-func loadConfig(input string, useStore bool, storeSize int, small bool, useVPTree bool, myNumber int, totalMachines int) error {
+func loadConfig(input string, useStore bool, storeSize int, small bool, compressed bool, useVPTree bool, myNumber int, totalMachines int) error {
 	var store simstore.Storage
 
 	totalLines, err := lineCounter(input)
@@ -155,16 +156,21 @@ func loadConfig(input string, useStore bool, storeSize int, small bool, useVPTre
 
 	log.Printf("preallocating for %d estimated signatures\n", sigsEstimate)
 
+	factory := simstore.NewU64Slice
+	if compressed {
+		factory = simstore.NewZStore
+	}
+
 	if useStore {
 		switch storeSize {
 		case 3:
 			if small {
 				store = simstore.New3Small(sigsEstimate)
 			} else {
-				store = simstore.New3(sigsEstimate, simstore.NewU64Slice)
+				store = simstore.New3(sigsEstimate, factory)
 			}
 		case 6:
-			store = simstore.New6(sigsEstimate, simstore.NewU64Slice)
+			store = simstore.New6(sigsEstimate, factory)
 		default:
 			return fmt.Errorf("unknown storage size: %d", storeSize)
 		}
