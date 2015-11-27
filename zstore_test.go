@@ -1,14 +1,11 @@
 package simstore
 
 import (
-	"bytes"
 	"math/rand"
 	"sort"
 	"testing"
 	"time"
 	"unsafe"
-
-	"github.com/dgryski/go-huff"
 )
 
 func TestCompress(t *testing.T) {
@@ -21,42 +18,27 @@ func TestCompress(t *testing.T) {
 	}
 	sort.Sort(u)
 
-	var b bytes.Buffer
-	compress(u, &b)
-	buffer := b.Bytes()
+	z := compress(u)
 
 	sz := len(u) * int(unsafe.Sizeof(u[0]))
-	csz := len(buffer)
+	csz := len(z.b)
 	t.Logf("entries=%d size=%d compressed=%d savings=%d%%\n", signatures, sz, csz, int(100-100*float64(csz)/float64(sz)))
 
 	var d u64store
 	var err error
-	var offset int
-
-	blen := len(buffer)
-
-	codebook, buffer := buffer[blen-66:], buffer[:blen-66]
-
-	hd, err := huff.NewDecoder(codebook)
-	if err != nil {
-		t.Fatalf("error creating decoder")
-	}
 
 	var totalDuration time.Duration
 	var blocks int
 
 	for i := range u {
 		if len(d) == 0 {
-			//	t.Logf("loading compressed block at offset %d\n", offset)
-
 			t0 := time.Now()
-			d, err = decompressBlock(hd, bytes.NewReader(buffer[offset:]))
+			d, err = z.decompressBlock(blocks)
 			totalDuration += time.Since(t0)
 			blocks++
 			if err != nil {
 				t.Errorf("decompress err = %+v\n", err)
 			}
-			offset += 1024
 		}
 
 		if u[i] != d[0] {

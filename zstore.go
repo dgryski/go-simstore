@@ -1,6 +1,7 @@
 package simstore
 
 import (
+	"bytes"
 	"errors"
 	"io"
 
@@ -17,9 +18,15 @@ const (
 type zstore struct {
 	index []uint64
 	d     *huff.Decoder
+	b     []byte
 }
 
-func compress(u u64store, w io.Writer) zstore {
+func (z zstore) blocks() int {
+	return len(z.index)
+}
+
+func compress(u u64store) zstore {
+
 	var counts [64]int
 
 	for i := 1; i < len(u); i++ {
@@ -29,23 +36,19 @@ func compress(u u64store, w io.Writer) zstore {
 
 	e := huff.NewEncoder(counts[:])
 
-	hw := e.Writer(w)
+	var w bytes.Buffer
+	hw := e.Writer(&w)
 
 	eofbits := e.SymbolLen(huff.EOF)
 
 	var nbits int
 	var index []uint64
 
-	for i := range u {
+	index = append(index, u[0])
+	hw.WriteBits(u[0], 64)
+	nbits += 64
 
-		// start of a block
-		if nbits == 0 {
-			h := u[i]
-			index = append(index, h)
-			hw.WriteBits(h, 64)
-			nbits += 64
-			continue
-		}
+	for i := 1; i < len(u); i++ {
 
 		// how much space required to compress this hash?
 		xor := u[i] ^ u[i-1]
@@ -76,10 +79,11 @@ func compress(u u64store, w io.Writer) zstore {
 
 			nbits = 0
 
-			// write the first part of the next block
-			hw.WriteBits(u[i], 64)
+			// this block is done, start the next block
+			h := u[i]
+			index = append(index, h)
+			hw.WriteBits(h, 64)
 			nbits += 64
-
 		} else {
 			panic("block overflow")
 		}
@@ -88,29 +92,39 @@ func compress(u u64store, w io.Writer) zstore {
 	hw.WriteSymbol(huff.EOF)
 	hw.Flush(bitstream.Zero)
 
-	// stuff the dictionary at the end
-	w.Write(e.CodebookBytes())
-
-	return zstore{index, e.Decoder()}
+	return zstore{index, e.Decoder(), w.Bytes()}
 }
 
-var ErrCorruptFile = errors.New("disktable: corrupt file")
+var (
+	ErrCorruptFile  = errors.New("zstore: corrupt file")
+	ErrInvalidBlock = errors.New("zstore: invalid block")
+)
 
-func decompressBlock(hr *huff.Decoder, r io.Reader) (u64store, error) {
-	var u u64store
+func (z zstore) decompressBlock(block int) (u64store, error) {
 
-	br := bitstream.NewReader(r)
+	if block < 0 || block >= len(z.index) {
+		return nil, ErrInvalidBlock
+	}
+
+	offs := block * 1024
+	end := offs + 1024
+	if end > len(z.b) {
+		end = len(z.b)
+	}
+
+	br := bitstream.NewReader(bytes.NewReader(z.b[offs:end]))
 
 	sig, err := br.ReadBits(64)
 	if err != nil {
-		return u, err
+		return nil, err
 	}
 
+	var u u64store
 	u = append(u, sig)
 
 	prev := sig
 	for {
-		samebits, err := hr.ReadSymbol(br)
+		samebits, err := z.d.ReadSymbol(br)
 		if samebits == huff.EOF {
 			break
 		}
