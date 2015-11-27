@@ -35,18 +35,15 @@ func (t table) Less(i, j int) bool { return t[i].hash < t[j].hash }
 
 const mask3 = 0xfffffff000000000
 
-func (t table) find(sig, mask uint64, d int) []uint64 {
+func (t table) find(sig uint64) []uint64 {
 
-	prefix := sig & mask
 	// TODO(dgryski): interpolation search instead of binary search; 2x speed up vs. sort.Search()
-	i := sort.Search(len(t), func(i int) bool { return t[i].hash >= prefix })
+	i := sort.Search(len(t), func(i int) bool { return t[i].hash >= sig })
 
 	var ids []uint64
 
-	for i < len(t) && t[i].hash&mask == prefix {
-		if distance(t[i].hash, sig) <= d {
-			ids = append(ids, t[i].docid)
-		}
+	for i < len(t) && t[i].hash == sig {
+		ids = append(ids, t[i].docid)
 		i++
 	}
 
@@ -205,7 +202,7 @@ func (s *Store) Find(sig uint64) []uint64 {
 
 	var docids []uint64
 	for _, v := range ids {
-		docids = append(docids, s.docids.find(v, ^uint64(0), 0)...)
+		docids = append(docids, s.docids.find(v)...)
 	}
 
 	return unique(docids)

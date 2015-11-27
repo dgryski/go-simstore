@@ -187,7 +187,7 @@ func (s *Store6) Find(sig uint64) []uint64 {
 
 	var docids []uint64
 	for _, v := range ids {
-		docids = append(docids, s.docids.find(v, ^uint64(0), 0)...)
+		docids = append(docids, s.docids.find(v)...)
 	}
 
 	return unique(docids)
