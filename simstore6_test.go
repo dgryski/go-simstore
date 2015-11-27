@@ -6,7 +6,7 @@ import (
 )
 
 func TestAdd3(t *testing.T) {
-	s := New3(1000000)
+	s := New3(1000000, NewU64Slice)
 	testAdd(t, s, 3)
 }
 
@@ -16,7 +16,7 @@ func TestAdd3Small(t *testing.T) {
 }
 
 func TestAdd6(t *testing.T) {
-	s := New6(1000000)
+	s := New6(1000000, NewU64Slice)
 	testAdd(t, s, 6)
 }
 

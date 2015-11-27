@@ -10,14 +10,14 @@ type Store6 struct {
 	Store
 }
 
-func New6(hashes int) *Store6 {
+func New6(hashes int, newStore func(hashes int) u64store) *Store6 {
 	var s Store6
-	s.rhashes = make([]u64slice, 49)
+	s.rhashes = make([]u64store, 49)
 
 	if hashes != 0 {
 		s.docids = make(table, 0, hashes)
 		for i := range s.rhashes {
-			s.rhashes[i] = make([]uint64, 0, hashes)
+			s.rhashes[i] = newStore(hashes)
 		}
 	}
 
@@ -34,49 +34,49 @@ func (s *Store6) Add(sig uint64, docid uint64) {
 
 	for i := 0; i < 6; i++ {
 		p = sig
-		s.rhashes[t] = append(s.rhashes[t], p)
+		s.rhashes[t].add(p)
 		t++
 		p = (sig & 0xff80007fffffffff) | (sig & 0x007f800000000000 >> 8) | (sig & 0x00007f8000000000 << 8)
-		s.rhashes[t] = append(s.rhashes[t], p)
+		s.rhashes[t].add(p)
 		t++
 		p = (sig & 0xff807f807fffffff) | (sig & 0x007f800000000000 >> 16) | (sig & 0x0000007f80000000 << 16)
-		s.rhashes[t] = append(s.rhashes[t], p)
+		s.rhashes[t].add(p)
 		t++
 		p = (sig & 0xff807fff807fffff) | (sig & 0x007f800000000000 >> 24) | (sig & 0x000000007f800000 << 24)
-		s.rhashes[t] = append(s.rhashes[t], p)
+		s.rhashes[t].add(p)
 		t++
 		p = (sig & 0xff807fffff807fff) | (sig & 0x007f800000000000 >> 32) | (sig & 0x00000000007f8000 << 32)
-		s.rhashes[t] = append(s.rhashes[t], p)
+		s.rhashes[t].add(p)
 		t++
 		p = (sig & 0xff807fffffff807f) | (sig & 0x007f800000000000 >> 40) | (sig & 0x0000000000007f80 << 40)
-		s.rhashes[t] = append(s.rhashes[t], p)
+		s.rhashes[t].add(p)
 		t++
 		p = (sig & 0xff80ffffffffff80) | (sig & 0x007f000000000000 >> 48) | (sig & 0x000000000000007f << 48)
-		s.rhashes[t] = append(s.rhashes[t], p)
+		s.rhashes[t].add(p)
 		t++
 		sig = (sig << 9) | (sig >> (64 - 9))
 	}
 
 	p = sig
-	s.rhashes[t] = append(s.rhashes[t], p)
+	s.rhashes[t].add(p)
 	t++
 	p = (sig & 0xffc0003fffffffff) | (sig & 0x003fc00000000000 >> 8) | (sig & 0x00003fc000000000 << 8)
-	s.rhashes[t] = append(s.rhashes[t], p)
+	s.rhashes[t].add(p)
 	t++
 	p = (sig & 0xffc03fc03fffffff) | (sig & 0x003fc00000000000 >> 16) | (sig & 0x0000003fc0000000 << 16)
-	s.rhashes[t] = append(s.rhashes[t], p)
+	s.rhashes[t].add(p)
 	t++
 	p = (sig & 0xffc03fffc03fffff) | (sig & 0x003fc00000000000 >> 24) | (sig & 0x000000003fc00000 << 24)
-	s.rhashes[t] = append(s.rhashes[t], p)
+	s.rhashes[t].add(p)
 	t++
 	p = (sig & 0xffc03fffffc03fff) | (sig & 0x003fc00000000000 >> 32) | (sig & 0x00000000003fc000 << 32)
-	s.rhashes[t] = append(s.rhashes[t], p)
+	s.rhashes[t].add(p)
 	t++
 	p = (sig & 0xffc07fffffffc07f) | (sig & 0x003f800000000000 >> 40) | (sig & 0x0000000000003f80 << 40)
-	s.rhashes[t] = append(s.rhashes[t], p)
+	s.rhashes[t].add(p)
 	t++
 	p = (sig & 0xffc07fffffffff80) | (sig & 0x003f800000000000 >> 47) | (sig & 0x000000000000007f << 47)
-	s.rhashes[t] = append(s.rhashes[t], p)
+	s.rhashes[t].add(p)
 }
 
 func (*Store6) unshuffle(sig uint64, t int) uint64 {

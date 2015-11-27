@@ -50,6 +50,17 @@ func (t table) find(sig uint64) []uint64 {
 	return ids
 }
 
+func NewU64Slice(hashes int) u64store {
+	u := make(u64slice, 0, hashes)
+	return &u
+}
+
+type u64store interface {
+	add(hash uint64)
+	find(sig uint64, mask uint64, d int) []uint64
+	finish()
+}
+
 // a store for uint64s
 type u64slice []uint64
 
@@ -75,20 +86,28 @@ func (u u64slice) find(sig, mask uint64, d int) []uint64 {
 	return ids
 }
 
+func (u *u64slice) add(p uint64) {
+	*u = append(*u, p)
+}
+
+func (u u64slice) finish() {
+	sort.Sort(u)
+}
+
 // Store is a storage engine for 64-bit hashes
 type Store struct {
 	docids  table
-	rhashes []u64slice
+	rhashes []u64store
 }
 
 // New3 returns a Store for searching hamming distance <= 3
-func New3(hashes int) *Store {
+func New3(hashes int, newStore func(int) u64store) *Store {
 	s := Store{}
-	s.rhashes = make([]u64slice, 16)
+	s.rhashes = make([]u64store, 16)
 	if hashes != 0 {
 		s.docids = make(table, 0, hashes)
 		for i := range s.rhashes {
-			s.rhashes[i] = make([]uint64, 0, hashes)
+			s.rhashes[i] = newStore(hashes)
 		}
 	}
 	return &s
@@ -103,19 +122,19 @@ func (s *Store) Add(sig uint64, docid uint64) {
 
 	for i := 0; i < 4; i++ {
 		p := sig
-		s.rhashes[t] = append(s.rhashes[t], p)
+		s.rhashes[t].add(p)
 		t++
 
 		p = (sig & 0xffff000000ffffff) | (sig & 0x0000fff000000000 >> 12) | (sig & 0x0000000fff000000 << 12)
-		s.rhashes[t] = append(s.rhashes[t], p)
+		s.rhashes[t].add(p)
 		t++
 
 		p = (sig & 0xffff000fff000fff) | (sig & 0x0000fff000000000 >> 24) | (sig & 0x0000000000fff000 << 24)
-		s.rhashes[t] = append(s.rhashes[t], p)
+		s.rhashes[t].add(p)
 		t++
 
 		p = (sig & 0xffff000ffffff000) | (sig & 0x0000fff000000000 >> 36) | (sig & 0x0000000000000fff << 36)
-		s.rhashes[t] = append(s.rhashes[t], p)
+		s.rhashes[t].add(p)
 		t++
 
 		sig = (sig << 16) | (sig >> (64 - 16))
@@ -162,7 +181,7 @@ func (s *Store) Finish() {
 		l.enter()
 		wg.Add(1)
 		go func(i int) {
-			sort.Sort(s.rhashes[i])
+			s.rhashes[i].finish()
 			l.leave()
 			wg.Done()
 		}(i)
