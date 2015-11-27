@@ -58,7 +58,7 @@ func testAdd(t *testing.T, s Storage, d int) {
 
 		}
 		if !foundbeef {
-			t.Errorf("sig = %016x (%064b)\n", sig, sig^q)
+			t.Errorf("sig = %016x (%064b) (found=%v)\n", sig, sig^q, found)
 			fails++
 		}
 	}
