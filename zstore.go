@@ -19,18 +19,33 @@ type zstore struct {
 	index []uint64
 	d     *huff.Decoder
 	b     []byte
+	u     u64slice
 }
 
-func (z zstore) blocks() int {
+func NewZStore(hashes int) u64store {
+	return &zstore{u: make(u64slice, 0, hashes)}
+}
+
+func (z *zstore) add(p uint64) {
+	z.u = append(z.u, p)
+}
+
+func (z *zstore) finish() {
+	z.u.finish()
+	z.compress()
+	z.u = nil
+}
+
+func (z *zstore) blocks() int {
 	return len(z.index)
 }
 
-func compress(u u64slice) zstore {
+func (z *zstore) compress() {
 
 	var counts [64]int
 
-	for i := 1; i < len(u); i++ {
-		lz := bits.Clz(u[i] ^ u[i-1])
+	for i := 1; i < len(z.u); i++ {
+		lz := bits.Clz(z.u[i] ^ z.u[i-1])
 		counts[lz]++
 	}
 
@@ -42,16 +57,15 @@ func compress(u u64slice) zstore {
 	eofbits := e.SymbolLen(huff.EOF)
 
 	var nbits int
-	var index []uint64
 
-	index = append(index, u[0])
-	hw.WriteBits(u[0], 64)
+	z.index = append(z.index, z.u[0])
+	hw.WriteBits(z.u[0], 64)
 	nbits += 64
 
-	for i := 1; i < len(u); i++ {
+	for i := 1; i < len(z.u); i++ {
 
 		// how much space required to compress this hash?
-		xor := u[i] ^ u[i-1]
+		xor := z.u[i] ^ z.u[i-1]
 		lz := int(bits.Clz(xor))
 		hlen := e.SymbolLen(uint32(lz))
 		rest := 64 - lz - 1
@@ -60,7 +74,7 @@ func compress(u u64slice) zstore {
 		if nbits+hlen+rest+eofbits < blockSizeBits {
 			hw.WriteSymbol(uint32(lz))
 			nbits += hlen
-			hw.WriteBits(u[i], rest)
+			hw.WriteBits(z.u[i], rest)
 			nbits += rest
 		} else if nbits+eofbits < blockSizeBits {
 			// doesn't fit, there should always be space for EOF
@@ -80,8 +94,8 @@ func compress(u u64slice) zstore {
 			nbits = 0
 
 			// this block is done, start the next block
-			h := u[i]
-			index = append(index, h)
+			h := z.u[i]
+			z.index = append(z.index, h)
 			hw.WriteBits(h, 64)
 			nbits += 64
 		} else {
@@ -92,7 +106,8 @@ func compress(u u64slice) zstore {
 	hw.WriteSymbol(huff.EOF)
 	hw.Flush(bitstream.Zero)
 
-	return zstore{index, e.Decoder(), w.Bytes()}
+	z.d = e.Decoder()
+	z.b = w.Bytes()
 }
 
 var (

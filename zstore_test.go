@@ -12,13 +12,16 @@ func TestCompress(t *testing.T) {
 
 	const signatures = 1 << 20
 
+	var z zstore
+
 	u := make(u64slice, signatures)
 	for i := range u {
 		u[i] = uint64(rand.Int63())
+		z.add(u[i])
 	}
 	sort.Sort(u)
 
-	z := compress(u)
+	z.finish()
 
 	sz := len(u) * int(unsafe.Sizeof(u[0]))
 	csz := len(z.b)
