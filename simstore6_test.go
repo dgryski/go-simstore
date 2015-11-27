@@ -5,36 +5,39 @@ import (
 	"testing"
 )
 
+const size = 1000000
+const queries = 1000000
+
 func TestAdd3(t *testing.T) {
-	s := New3(1000000, NewU64Slice)
-	testAdd(t, s, 3)
+	s := New3(size, NewU64Slice)
+	testAdd(t, s, size, queries, 3)
 }
 
 func TestAdd3Small(t *testing.T) {
-	s := New3Small(1000000)
-	testAdd(t, s, 3)
+	s := New3Small(size)
+	testAdd(t, s, size, queries, 3)
 }
 
 func TestAdd6(t *testing.T) {
-	s := New6(1000000, NewU64Slice)
-	testAdd(t, s, 6)
+	s := New6(size, NewU64Slice)
+	testAdd(t, s, size, queries, 6)
 }
 
 func TestAdd3Z(t *testing.T) {
-	s := New3(1000000, NewZStore)
-	testAdd(t, s, 3)
+	s := New3(size, NewZStore)
+	testAdd(t, s, size, queries/100, 3)
 }
 
 func TestAdd6Z(t *testing.T) {
-	s := New6(1000000, NewZStore)
-	testAdd(t, s, 6)
+	s := New6(size, NewZStore)
+	testAdd(t, s, size, queries/100, 6)
 }
 
-func testAdd(t *testing.T, s Storage, d int) {
+func testAdd(t *testing.T, s Storage, size, queries, d int) {
 
 	rand.Seed(0)
 
-	for i := 0; i < 1000000; i++ {
+	for i := 0; i < size; i++ {
 		s.Add(uint64(rand.Int63()), uint64(i))
 	}
 
@@ -44,8 +47,6 @@ func testAdd(t *testing.T, s Storage, d int) {
 	s.Finish()
 
 	var fails int
-
-	const queries = 1000000
 
 	for j := 0; j < queries; j++ {
 
@@ -74,6 +75,6 @@ func testAdd(t *testing.T, s Storage, d int) {
 	}
 
 	if fails != 0 {
-		t.Logf("fails = %f", 100*float64(fails)/queries)
+		t.Logf("fails = %f", 100*float64(fails)/float64(queries))
 	}
 }
