@@ -25,7 +25,7 @@ func (z zstore) blocks() int {
 	return len(z.index)
 }
 
-func compress(u u64store) zstore {
+func compress(u u64slice) zstore {
 
 	var counts [64]int
 
@@ -100,7 +100,7 @@ var (
 	ErrInvalidBlock = errors.New("zstore: invalid block")
 )
 
-func (z zstore) decompressBlock(block int) (u64store, error) {
+func (z zstore) decompressBlock(block int) (u64slice, error) {
 
 	if block < 0 || block >= len(z.index) {
 		return nil, ErrInvalidBlock
@@ -119,7 +119,7 @@ func (z zstore) decompressBlock(block int) (u64store, error) {
 		return nil, err
 	}
 
-	var u u64store
+	var u u64slice
 	u = append(u, sig)
 
 	prev := sig

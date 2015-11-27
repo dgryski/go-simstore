@@ -12,7 +12,7 @@ func TestCompress(t *testing.T) {
 
 	const signatures = 1 << 20
 
-	u := make(u64store, signatures)
+	u := make(u64slice, signatures)
 	for i := range u {
 		u[i] = uint64(rand.Int63())
 	}
@@ -24,7 +24,7 @@ func TestCompress(t *testing.T) {
 	csz := len(z.b)
 	t.Logf("entries=%d size=%d compressed=%d savings=%d%%\n", signatures, sz, csz, int(100-100*float64(csz)/float64(sz)))
 
-	var d u64store
+	var d u64slice
 	var err error
 
 	var totalDuration time.Duration

@@ -51,13 +51,13 @@ func (t table) find(sig uint64) []uint64 {
 }
 
 // a store for uint64s
-type u64store []uint64
+type u64slice []uint64
 
-func (u u64store) Len() int               { return len(u) }
-func (u u64store) Less(i int, j int) bool { return u[i] < u[j] }
-func (u u64store) Swap(i int, j int)      { u[i], u[j] = u[j], u[i] }
+func (u u64slice) Len() int               { return len(u) }
+func (u u64slice) Less(i int, j int) bool { return u[i] < u[j] }
+func (u u64slice) Swap(i int, j int)      { u[i], u[j] = u[j], u[i] }
 
-func (u u64store) find(sig, mask uint64, d int) []uint64 {
+func (u u64slice) find(sig, mask uint64, d int) []uint64 {
 
 	prefix := sig & mask
 	// TODO(dgryski): interpolation search instead of binary search; 2x speed up vs. sort.Search()
@@ -78,13 +78,13 @@ func (u u64store) find(sig, mask uint64, d int) []uint64 {
 // Store is a storage engine for 64-bit hashes
 type Store struct {
 	docids  table
-	rhashes []u64store
+	rhashes []u64slice
 }
 
 // New3 returns a Store for searching hamming distance <= 3
 func New3(hashes int) *Store {
 	s := Store{}
-	s.rhashes = make([]u64store, 16)
+	s.rhashes = make([]u64slice, 16)
 	if hashes != 0 {
 		s.docids = make(table, 0, hashes)
 		for i := range s.rhashes {

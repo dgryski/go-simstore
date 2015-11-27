@@ -12,7 +12,7 @@ type Store6 struct {
 
 func New6(hashes int) *Store6 {
 	var s Store6
-	s.rhashes = make([]u64store, 49)
+	s.rhashes = make([]u64slice, 49)
 
 	if hashes != 0 {
 		s.docids = make(table, 0, hashes)
