@@ -171,29 +171,16 @@ func (z *zstore) find(sig, mask uint64, d int) []uint64 {
 	var ids []uint64
 
 	if block > 0 {
-		u, err := z.decompressBlock(block - 1)
-		if err != nil {
-			return nil
+		if u, err := z.decompressBlock(block - 1); err == nil {
+			ids = append(ids, u.find(sig, mask, d)...)
 		}
-		ids = u.find(sig, mask, d)
 	}
 
-	if block >= z.blocks() {
-		return ids
-	}
-
-	u, err := z.decompressBlock(block)
-	if err != nil {
-		return nil
-	}
-	ids = append(ids, u.find(sig, mask, d)...)
-
-	for u[len(u)-1]&mask == prefix {
-		u, err = z.decompressBlock(block)
-		if err != nil {
-			return nil
+	for block < z.blocks() && z.index[block]&mask == prefix {
+		if u, err := z.decompressBlock(block); err == nil {
+			ids = append(ids, u.find(sig, mask, d)...)
 		}
-		ids = append(ids, u.find(sig, mask, d)...)
+		block++
 	}
 	return ids
 }
