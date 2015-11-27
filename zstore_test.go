@@ -13,7 +13,7 @@ import (
 
 func TestCompress(t *testing.T) {
 
-	const signatures = 1 << 25
+	const signatures = 1 << 20
 
 	u := make(u64store, signatures)
 	for i := range u {
