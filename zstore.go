@@ -47,6 +47,10 @@ func (z *zstore) compress() {
 
 	for i := 1; i < len(z.u); i++ {
 		lz := bits.Clz(z.u[i] ^ z.u[i-1])
+		if lz == 64 {
+			// duplicate signature, ignore
+			continue
+		}
 		counts[lz]++
 	}
 
@@ -67,6 +71,10 @@ func (z *zstore) compress() {
 
 		// how much space required to compress this hash?
 		xor := z.u[i] ^ z.u[i-1]
+		if xor == 0 {
+			// duplicate signature -- ignore
+			continue
+		}
 		lz := int(bits.Clz(xor))
 		hlen := e.SymbolLen(uint32(lz))
 		rest := 64 - lz - 1

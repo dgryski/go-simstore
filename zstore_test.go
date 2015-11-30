@@ -53,3 +53,34 @@ func TestCompress(t *testing.T) {
 	t.Logf("blocks=%d, average decompression time %v", blocks, totalDuration/time.Duration(blocks))
 
 }
+
+func TestDuplicateSignatures(t *testing.T) {
+
+	const signatures = 20
+
+	var z zstore
+
+	u := make(u64slice, signatures)
+	for i := range u {
+		u[i] = uint64(rand.Int63())
+		z.add(u[i])
+		z.add(u[i])
+	}
+	sort.Sort(u)
+
+	z.finish()
+
+	d, err := z.decompressBlock(0)
+	if err != nil {
+		t.Fatalf("error during decompressBlock: %v\n", err)
+	}
+	if len(d) != len(u) {
+		t.Fatalf("len(d)=%d len(u)=%d\n", len(d), len(u))
+	}
+
+	for i := range d {
+		if d[i] != u[i] {
+			t.Errorf("d[%d]=%x u[%d]=%x\n", i, d[i], i, u[i])
+		}
+	}
+}
