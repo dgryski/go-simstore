@@ -40,8 +40,9 @@ func (s *SliceScanner) Bytes() []byte {
 
 func ScanByteTrigrams(data []byte, atEOF bool) (advance int, token []byte, err error) {
 
-	if atEOF && len(data) < 3 {
+	if atEOF || len(data) < 3 {
 		return 0, nil, nil
 	}
-	return 1, data[0:3], nil
+
+	return 1, data[:3], nil
 }

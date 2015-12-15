@@ -29,4 +29,6 @@ func TestSimHash(t *testing.T) {
 	fmt.Printf("d(h1,h3)=%d\n", Distance(h1, h3))
 	fmt.Printf("d(h2,h3)=%d\n", Distance(h2, h3))
 
+	h4 := simhashString(strings.Repeat("Now is the winter", 241)) // length = 4097
+	fmt.Printf("h=%016x\n", h4)
 }
