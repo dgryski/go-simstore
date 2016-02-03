@@ -69,17 +69,17 @@ func (z *zstore) compress() {
 
 	for i := 1; i < len(z.u); i++ {
 		// how much space required to compress this hash?
-		lz := int(bits.Clz(z.u[i] ^ z.u[i-1]))
+		lz := uint32(bits.Clz(z.u[i] ^ z.u[i-1]))
 		if lz == 64 {
 			// duplicate signature -- ignore
 			continue
 		}
-		hlen := e.SymbolLen(uint32(lz))
-		rest := 64 - lz - 1
+		hlen := e.SymbolLen(lz)
+		rest := 64 - int(lz) - 1
 
 		// fits in this block
 		if nbits+hlen+rest+eofbits < blockSizeBits {
-			hw.WriteSymbol(uint32(lz))
+			hw.WriteSymbol(lz)
 			nbits += hlen
 			hw.WriteBits(z.u[i], rest)
 			nbits += rest
