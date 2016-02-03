@@ -224,7 +224,7 @@ func (s *Store) Find(sig uint64) []uint64 {
 		docids = append(docids, s.docids.find(v)...)
 	}
 
-	return unique(docids)
+	return docids
 }
 
 // SmallStore3 is a simstore for distance k=3 with smaller memory requirements

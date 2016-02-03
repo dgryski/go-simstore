@@ -190,5 +190,5 @@ func (s *Store6) Find(sig uint64) []uint64 {
 		docids = append(docids, s.docids.find(v)...)
 	}
 
-	return unique(docids)
+	return docids
 }
