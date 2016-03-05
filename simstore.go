@@ -171,6 +171,11 @@ func (l limiter) leave() { <-l }
 // the signatures have been added via Add().
 func (s *Store) Finish() {
 
+	// empty store
+	if len(s.docids) == 0 {
+		return
+	}
+
 	l := make(limiter, runtime.GOMAXPROCS(0))
 
 	var wg sync.WaitGroup
@@ -192,6 +197,11 @@ func (s *Store) Finish() {
 // Find searches the store for all hashes hamming distance 3 or less from the
 // query signature.  It returns the associated list of document ids.
 func (s *Store) Find(sig uint64) []uint64 {
+
+	// empty store
+	if len(s.docids) == 0 {
+		return nil
+	}
 
 	var ids []uint64
 
