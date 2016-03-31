@@ -89,19 +89,15 @@ func main() {
 		sigs := make(chan os.Signal)
 		signal.Notify(sigs, syscall.SIGHUP)
 
-		for {
-			select {
-			case <-sigs:
-				log.Println("caught SIGHUP, reloading")
+		for range sigs {
+			log.Println("caught SIGHUP, reloading")
 
-				err := loadConfig(*input, *useStore, *storeSize, *small, *compressed, *useVPTree, *myNumber, *totalMachines)
-				if err != nil {
-					log.Println("reload failed: ignoring:", err)
-					break
-				}
+			err := loadConfig(*input, *useStore, *storeSize, *small, *compressed, *useVPTree, *myNumber, *totalMachines)
+			if err != nil {
+				log.Println("reload failed: ignoring:", err)
+				break
 			}
 		}
-
 	}()
 
 	log.Println("listening on port", *port)
