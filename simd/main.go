@@ -7,6 +7,7 @@ import (
 	"expvar"
 	"flag"
 	"fmt"
+	"time"
 	"io"
 	"log"
 	"net/http"
@@ -22,6 +23,7 @@ import (
 
 	"github.com/dgryski/go-simstore"
 	"github.com/dgryski/go-simstore/vptree"
+	"github.com/peterbourgon/g2g"
 )
 
 var Metrics = struct {
@@ -58,6 +60,9 @@ func main() {
 	totalMachines := flag.Int("of", 1, "number of machines to distribute the table among")
 	small := flag.Bool("small", false, "use small memory for size 3")
 	compressed := flag.Bool("z", false, "use compressed tables")
+	graphite_host := flag.String("graphite_host", "", "graphite host")
+	graphite_port := flag.String("graphite_port", "", "graphite port")
+	graphite_namespace := flag.String("graphite_namespace", "", "graphite namespace")
 
 	flag.Parse()
 
@@ -70,6 +75,9 @@ func main() {
 
 	if *input == "" {
 		log.Fatalln("no import hash list provided (-f)")
+	}
+	if *graphite_host != "" && *graphite_namespace == "" {
+		log.Fatalln("no graphite namespace provided (-f)")	
 	}
 
 	err := loadConfig(*input, *useStore, *storeSize, *small, *compressed, *useVPTree, *myNumber, *totalMachines)
@@ -99,6 +107,18 @@ func main() {
 			}
 		}
 	}()
+
+	if *graphite_host != "" {
+		if *graphite_port == "" {
+        	*graphite_port = "2003"
+         }
+         hostport := *graphite_host + ":" + *graphite_port
+         graphite := g2g.NewGraphite(hostport, 60*time.Second, 5*time.Second)
+         hostname, _ := os.Hostname()
+         namespace := *graphite_namespace + "." + hostname + ".metrics"
+         graphite.Register(namespace + ".signatures", Metrics.Signatures)
+		 graphite.Register(namespace + ".requests", Metrics.Requests)
+	}
 
 	log.Println("listening on port", *port)
 	log.Fatal(http.ListenAndServe(":"+strconv.Itoa(*port), nil))
