@@ -54,6 +54,30 @@ func TestCompress(t *testing.T) {
 
 }
 
+func BenchmarkDecompress(b *testing.B) {
+
+	const signatures = 1 << 20
+
+	var z zstore
+
+	u := make(u64slice, signatures)
+	for i := range u {
+		u[i] = uint64(rand.Int63())
+		z.add(u[i])
+	}
+	sort.Sort(u)
+
+	z.finish()
+
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		for j := 0; j < len(z.index); j++ {
+			z.decompressBlock(j)
+		}
+	}
+}
+
 func TestDuplicateSignatures(t *testing.T) {
 
 	const signatures = 20
