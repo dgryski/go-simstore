@@ -60,9 +60,8 @@ func main() {
 	totalMachines := flag.Int("of", 1, "number of machines to distribute the table among")
 	small := flag.Bool("small", false, "use small memory for size 3")
 	compressed := flag.Bool("z", false, "use compressed tables")
-	graphite_host := flag.String("graphite_host", "", "graphite host")
-	graphite_port := flag.String("graphite_port", "", "graphite port")
-	graphite_namespace := flag.String("graphite_namespace", "", "graphite namespace")
+	graphiteHost := flag.String("graphite", "", "graphite destination host")
+	graphiteNamespace := flag.String("namespace", "", "graphite namespace")
 
 	flag.Parse()
 
@@ -76,9 +75,6 @@ func main() {
 	if *input == "" {
 		log.Fatalln("no import hash list provided (-f)")
 	}
-	if *graphite_host != "" && *graphite_namespace == "" {
-		log.Fatalln("no graphite namespace provided (-f)")	
-	}
 
 	err := loadConfig(*input, *useStore, *storeSize, *small, *compressed, *useVPTree, *myNumber, *totalMachines)
 	if err != nil {
@@ -91,6 +87,31 @@ func main() {
 
 	if *useVPTree {
 		http.HandleFunc("/topk", func(w http.ResponseWriter, r *http.Request) { topkHandler(w, r) })
+	}
+
+	if envhost := os.Getenv("GRAPHITEHOST") + ":" + os.Getenv("GRAPHITEPORT"); envhost != ":" || *graphiteHost != "" {
+		if *graphiteNamespace == "" {
+			*graphiteNamespace = "general.simstore"
+		}
+
+		var host string
+
+		switch {
+		case envhost != ":" && *graphiteHost != "":
+			host = *graphiteHost
+		case envhost != ":":
+			host = envhost
+		case *graphiteHost != "":
+			host = *graphiteHost
+		}
+
+		log.Println("Using graphite host", host)
+		graphite := g2g.NewGraphite(host, 60*time.Second, 5*time.Second)
+        hostname, _ := os.Hostname()
+        hostname = strings.Replace(hostname, ".", "_", -1)
+        namespace := fmt.Sprintf("%s.%s", graphiteNamespace, hostname)
+        graphite.Register(namespace + ".signatures", Metrics.Signatures)
+		graphite.Register(namespace + ".requests", Metrics.Requests)
 	}
 
 	go func() {
@@ -107,18 +128,6 @@ func main() {
 			}
 		}
 	}()
-
-	if *graphite_host != "" {
-		if *graphite_port == "" {
-        	*graphite_port = "2003"
-         }
-         hostport := *graphite_host + ":" + *graphite_port
-         graphite := g2g.NewGraphite(hostport, 60*time.Second, 5*time.Second)
-         hostname, _ := os.Hostname()
-         namespace := *graphite_namespace + "." + hostname + ".metrics"
-         graphite.Register(namespace + ".signatures", Metrics.Signatures)
-		 graphite.Register(namespace + ".requests", Metrics.Requests)
-	}
 
 	log.Println("listening on port", *port)
 	log.Fatal(http.ListenAndServe(":"+strconv.Itoa(*port), nil))
