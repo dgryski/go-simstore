@@ -18,10 +18,12 @@ import (
 	"strings"
 	"sync/atomic"
 	"syscall"
+	"time"
 	"unsafe"
 
 	"github.com/dgryski/go-simstore"
 	"github.com/dgryski/go-simstore/vptree"
+	"github.com/peterbourgon/g2g"
 )
 
 var Metrics = struct {
@@ -58,6 +60,8 @@ func main() {
 	totalMachines := flag.Int("of", 1, "number of machines to distribute the table among")
 	small := flag.Bool("small", false, "use small memory for size 3")
 	compressed := flag.Bool("z", false, "use compressed tables")
+	graphiteHost := flag.String("graphite", "", "graphite destination host")
+	graphiteNamespace := flag.String("namespace", "", "graphite namespace")
 
 	flag.Parse()
 
@@ -83,6 +87,31 @@ func main() {
 
 	if *useVPTree {
 		http.HandleFunc("/topk", func(w http.ResponseWriter, r *http.Request) { topkHandler(w, r) })
+	}
+
+	if envhost := os.Getenv("GRAPHITEHOST") + ":" + os.Getenv("GRAPHITEPORT"); envhost != ":" || *graphiteHost != "" {
+		if *graphiteNamespace == "" {
+			*graphiteNamespace = "general.simstore"
+		}
+
+		var host string
+
+		switch {
+		case envhost != ":" && *graphiteHost != "":
+			host = *graphiteHost
+		case envhost != ":":
+			host = envhost
+		case *graphiteHost != "":
+			host = *graphiteHost
+		}
+
+		log.Println("Using graphite host", host)
+		graphite := g2g.NewGraphite(host, 60*time.Second, 5*time.Second)
+		hostname, _ := os.Hostname()
+		hostname = strings.Replace(hostname, ".", "_", -1)
+		namespace := fmt.Sprintf("%s.%s", graphiteNamespace, hostname)
+		graphite.Register(namespace+".signatures", Metrics.Signatures)
+		graphite.Register(namespace+".requests", Metrics.Requests)
 	}
 
 	go func() {
