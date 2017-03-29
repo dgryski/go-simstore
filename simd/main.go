@@ -218,6 +218,9 @@ func loadConfig(input string, useStore bool, storeSize int, small bool, compress
 	for scanner.Scan() {
 
 		fields := strings.Fields(scanner.Text())
+		if len(fields) < 2 {
+			return fmt.Errorf("%d: error parsing input, less then 2 fields", lines)
+		}
 
 		id, err := strconv.Atoi(fields[0])
 		if err != nil {
